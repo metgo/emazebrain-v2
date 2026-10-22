@@ -13,6 +13,8 @@ A rebuild of eMazeBrain: a platform where pediatric therapists run multi-week pr
 | `packages/game-sdk` | The typed contract between games and the host: manifest, parameters, lifecycle, events | Types only |
 | `apps/api` | Hono API service | Health endpoint + request ids |
 | `games/tunnel-rush-spike` | Throwaway test: can PixiJS 8 run Tunnel Rush at 60 fps on a cheap tablet? | Ready to run on a device |
+| `spikes/powersync` | Self-hosted PowerSync vs RLS: same rows for every user? | PASS: 0 leaks, 0 gaps over 160 users; revocations < 1 s |
+| `spikes/capacitor-offline` | Sandboxed game loads its pack offline | PASS in Chromium (9/9); device run pending |
 | `docs/adr` | Architecture decision records | 3 ADRs |
 
 ## Getting started
@@ -37,8 +39,8 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres pnpm --filter @emb/db t
 - [x] Game SDK types
 - [x] CI pipeline
 - [ ] Tunnel Rush spike measured on a Galaxy Tab A9 and an iPad 9th gen
-- [ ] PowerSync spike: synced rows equal RLS rows
-- [ ] Capacitor spike: sandboxed game loads its packs offline
+- [x] PowerSync spike: synced rows equal RLS rows (0 leaks, 0 gaps; revocations < 1 s)
+- [x] Capacitor spike: sandboxed game loads its packs offline (Chromium PASS; Android/iPad run pending)
 - [ ] Better Auth with MFA
 - [ ] Audit log
 - [ ] SST infrastructure for the Israel cell

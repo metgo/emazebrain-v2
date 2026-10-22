@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">eMaze Offline Spike</string>
+    <string name="title_activity_main">eMaze Offline Spike</string>
+    <string name="package_name">app.emazebrain.spike</string>
+    <string name="custom_url_scheme">app.emazebrain.spike</string>
+</resources>

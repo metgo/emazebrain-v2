@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline Game Spike</title>
+    <style>
+      :root { color-scheme: light; --bg: #f6f7fb; --surface: #ffffff; --fg: #111827; --muted: #5b6474; --line: #e2e5ee; --brand: #5b4bdb; --ok: #1e7f4f; --bad: #b42318; }
+      body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif;
+             padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 16px max(16px, env(safe-area-inset-left)); }
+      main { max-width: 760px; margin: 0 auto; display: grid; gap: 16px; }
+      h1 { font-size: 22px; margin: 0; }
+      p { margin: 0; color: var(--muted); }
+      .row { display: flex; flex-wrap: wrap; gap: 8px; }
+      button { min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--brand); background: var(--surface); color: var(--brand); font: inherit; font-weight: 600; }
+      button.primary { background: var(--brand); color: #fff; }
+      #stage iframe { width: 100%; height: 230px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+      ol { margin: 0; padding-inline-start: 20px; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+      .ok { color: var(--ok); } .bad { color: var(--bad); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Offline game spike</h1>
+      <p>1. Download the pack while online. 2. Turn on airplane mode. 3. Play. The game loads from the device and is cut off from the network.</p>
+      <div class="row">
+        <button id="download">Download pack</button>
+        <button id="play" class="primary">Play</button>
+        <button id="corrupt">Corrupt stored pack</button>
+      </div>
+      <div id="stage"></div>
+      <ol id="log"></ol>
+    </main>
+    <script type="module" src="./src/host.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "id": "peek-peek",
+  "version": "2.0.0-spike",
+  "palette": "warm",
+  "files": [
+    {
+      "path": "tile-covered.svg",
+      "bytes": 395,
+      "sha256": "1b61e7e50df8b3fb83c3af9452ee282118a81a96ee0138aaa899dd3fb1ab086d",
+      "type": "image/svg+xml"
+    },
+    {
+      "path": "tile-correct.svg",
+      "bytes": 395,
+      "sha256": "5da369bc9227308b1328a793dd25da3198a1b90b75b0d47bf19bf61176dbd291",
+      "type": "image/svg+xml"
+    },
+    {
+      "path": "tile-wrong.svg",
+      "bytes": 395,
+      "sha256": "efa04fd348543baba527248a17a6b6e6a2c272b956f16703eb7e349fd38efc15",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- The game gets no network at all: it can only use what the host hands it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob:">
+<style>
+  html, body { margin: 0; background: #FFD08A; font: 16px system-ui, sans-serif; color: #3D1410; }
+  canvas { display: block; margin: 12px auto; }
+  p { text-align: center; margin: 8px; }
+</style>
+</head>
+<body>
+<canvas id="board" width="420" height="160"></canvas>
+<p id="status">Waiting for the host…</p>
+<script>
+  // Minimal stand-in for a Game SDK module: receives the pack over the bridge,
+  // decodes it from ArrayBuffers, draws it, and reports what it could and couldn't do.
+  const report = {};
+  window.addEventListener("message", async (e) => {
+    const msg = e.data;
+    if (!msg || msg.ch !== "emb" || msg.type !== "init") return;
+    const started = performance.now();
+    report.origin = self.origin;                      // expect "null": opaque, sandboxed
+    try { void parent.document; report.parentAccess = true; } catch { report.parentAccess = false; }
+    try { await fetch("https://example.com/"); report.networkBlocked = false; } catch { report.networkBlocked = true; }
+    try { localStorage.setItem("x", "1"); report.storageBlocked = false; } catch { report.storageBlocked = true; }
+
+    const ctx = document.getElementById("board").getContext("2d");
+    let decoded = 0, x = 10;
+    for (const f of msg.payload.files) {
+      const url = URL.createObjectURL(new Blob([f.data], { type: f.type }));
+      const img = new Image();
+      await new Promise((ok, fail) => { img.onload = ok; img.onerror = fail; img.src = url; });
+      ctx.drawImage(img, x, 16, 128, 128);
+      x += 138;
+      decoded++;
+      URL.revokeObjectURL(url);
+    }
+    report.filesReceived = msg.payload.files.length;
+    report.imagesDecoded = decoded;
+    report.loadMs = Math.round(performance.now() - started);
+    document.getElementById("status").textContent = `Loaded ${decoded} tiles from the ${msg.payload.palette} pack`;
+    parent.postMessage({ ch: "emb", type: "ready", payload: report }, "*");
+  });
+  parent.postMessage({ ch: "emb", type: "booted" }, "*");
+</script>
+</body>
+</html>
