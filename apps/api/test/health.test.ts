@@ -10,9 +10,12 @@ describe("api", () => {
     expect(await res.json()).toEqual({ status: "ok", cell: "il", version: "test" });
   });
 
-  it("echoes or creates a request id", async () => {
-    const withId = await app.request("/health", { headers: { "x-request-id": "abc" } });
-    expect(withId.headers.get("x-request-id")).toBe("abc");
+  it("echoes a valid request id, or creates one", async () => {
+    const id = "0192f3a0-1c2b-7d3e-8f40-123456789abc";
+    const withId = await app.request("/health", { headers: { "x-request-id": id } });
+    expect(withId.headers.get("x-request-id")).toBe(id);
+    const junk = await app.request("/health", { headers: { "x-request-id": "not-a-uuid" } });
+    expect(junk.headers.get("x-request-id")).not.toBe("not-a-uuid");
     const without = await app.request("/health");
     expect(without.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
   });
