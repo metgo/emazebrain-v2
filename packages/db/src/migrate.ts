@@ -1,0 +1,54 @@
+/**
+ * Minimal forward-only migration runner. Applies migrations/*.sql in name
+ * order, once each, inside a transaction, and records them in
+ * public.schema_migrations. Drizzle replaces this once the schema grows
+ * (design doc §9.3); the SQL files stay the source of truth for RLS.
+ */
+import { readdir, readFile } from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import pg from "pg";
+
+export const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
+
+export async function migrate(client: pg.Client, dir = MIGRATIONS_DIR): Promise<string[]> {
+  await client.query(
+    "CREATE TABLE IF NOT EXISTS public.schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
+  );
+  const done = new Set(
+    (await client.query<{ name: string }>("SELECT name FROM public.schema_migrations")).rows.map((r) => r.name),
+  );
+  const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
+  const applied: string[] = [];
+  for (const file of files) {
+    if (done.has(file)) continue;
+    const sql = await readFile(join(dir, file), "utf8");
+    await client.query("BEGIN");
+    try {
+      await client.query(sql);
+      await client.query("INSERT INTO public.schema_migrations (name) VALUES ($1)", [file]);
+      await client.query("COMMIT");
+      applied.push(file);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw new Error(`Migration ${file} failed: ${(err as Error).message}`);
+    }
+  }
+  return applied;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error("DATABASE_URL is not set");
+    process.exit(1);
+  }
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  try {
+    const applied = await migrate(client);
+    console.log(applied.length ? `Applied: ${applied.join(", ")}` : "Up to date");
+  } finally {
+    await client.end();
+  }
+}

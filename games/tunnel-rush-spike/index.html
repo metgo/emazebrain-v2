@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Tunnel Rush Spike</title>
+    <style>
+      :root { --bg: #0e1530; --fg: #f0f7ff; --muted: #a8d8f5; --ok: #4ade80; --bad: #f97066; --warn: #f5c431; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, sans-serif; overflow: hidden; touch-action: none; }
+      #stage { position: fixed; inset: 0; }
+      #panel { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; pointer-events: none; }
+      .card { background: rgba(14, 21, 48, 0.85); border: 1px solid #3d63d6; border-radius: 12px; padding: 10px 12px; pointer-events: auto; }
+      #stats { min-width: 220px; font-variant-numeric: tabular-nums; }
+      #stats b { font-size: 22px; }
+      .verdict-ok { color: var(--ok); } .verdict-bad { color: var(--bad); } .verdict-wait { color: var(--warn); }
+      #controls { display: flex; flex-wrap: wrap; gap: 6px; }
+      button, select { min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #6cc4e8; background: #232c6b; color: var(--fg); font: inherit; }
+      #steer { position: fixed; bottom: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; pointer-events: none; }
+      #steer button { pointer-events: auto; width: 72px; height: 72px; font-size: 28px; border-radius: 36px; }
+      small { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="panel">
+      <div class="card" id="stats">Measuring…</div>
+      <div class="card" id="controls">
+        <label>Load
+          <select id="load">
+            <option value="1">Normal (difficulty 3)</option>
+            <option value="2">Heavy (difficulty 5)</option>
+            <option value="3">Stress (3× objects + particles)</option>
+          </select>
+        </label>
+        <button id="restart">Restart 30 s run</button>
+        <button id="copy">Copy results</button>
+      </div>
+    </div>
+    <div id="steer"><button id="left" aria-label="Steer left">◀</button><button id="right" aria-label="Steer right">▶</button></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
