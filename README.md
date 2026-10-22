@@ -12,9 +12,9 @@ A rebuild of eMazeBrain: a platform where pediatric therapists run multi-week pr
 | `packages/db` | Postgres migrations with row-level security per clinic, and isolation tests against a real database | Core tenancy, patients, care team, consent; 12 tests |
 | `packages/game-sdk` | The typed contract between games and the host: manifest, parameters, lifecycle, events | Types only |
 | `apps/api` | Hono API service | Health endpoint + request ids |
-| `games/tunnel-rush-spike` | Throwaway test: can PixiJS 8 run Tunnel Rush at 60 fps on a cheap tablet? | Ready to run on a device |
+| `games/tunnel-rush-spike` | Throwaway test: can PixiJS 8 run Tunnel Rush at 60 fps on a cheap tablet? | PASS on the founder's test tablets (2026-10-22) |
 | `spikes/powersync` | Self-hosted PowerSync vs RLS: same rows for every user? | PASS: 0 leaks, 0 gaps over 160 users; revocations < 1 s |
-| `spikes/capacitor-offline` | Sandboxed game loads its pack offline | PASS in Chromium (9/9); device run pending |
+| `spikes/capacitor-offline` | Sandboxed game loads its pack offline | PASS in Chromium (9/9) and in the tablet browser; installed-app run later |
 | `docs/adr` | Architecture decision records | 3 ADRs |
 
 ## Getting started
@@ -38,9 +38,9 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres pnpm --filter @emb/db t
 - [x] RLS schema for tenancy and patients, with a test that every table forces RLS
 - [x] Game SDK types
 - [x] CI pipeline
-- [ ] Tunnel Rush spike measured on a Galaxy Tab A9 and an iPad 9th gen
+- [x] Tunnel Rush spike passed on the founder's test tablets
 - [x] PowerSync spike: synced rows equal RLS rows (0 leaks, 0 gaps; revocations < 1 s)
-- [x] Capacitor spike: sandboxed game loads its packs offline (Chromium PASS; Android/iPad run pending)
+- [x] Capacitor spike: sandboxed game loads its packs offline (Chromium and tablet browser PASS; installed-app run later)
 - [ ] Better Auth with MFA
 - [ ] Audit log
 - [ ] SST infrastructure for the Israel cell
