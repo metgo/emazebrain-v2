@@ -1,0 +1,48 @@
+# PowerSync Sync Streams for eMazeBrain v2 — spike (design doc §9.8).
+#
+# Goal: each user's device receives exactly the patients that Postgres RLS
+# (app.can_see_patient) lets that user read, and nothing more. PowerSync
+# replicates from the write-ahead log, which bypasses RLS, so these rules must
+# mirror the policy. compare.ts checks that for every synthetic user.
+config:
+  edition: 3
+
+streams:
+  # Therapists and assistants: patients on their active care team, in a clinic
+  # where they hold an active therapist/assistant membership.
+  care_team_patients:
+    auto_subscribe: true
+    queries:
+      - >-
+        SELECT * FROM app.patient
+        WHERE deleted_at IS NULL
+          AND id IN (SELECT patient_id FROM app.patient_care_team
+                     WHERE user_id = auth.user_id() AND ended_at IS NULL)
+          AND clinic_id IN (SELECT clinic_id FROM app.membership
+                            WHERE user_id = auth.user_id() AND status = 'active'
+                              AND (role = 'therapist' OR role = 'assistant'))
+
+  # Clinic managers and clinic-scoped org admins: every patient in their clinic.
+  clinic_patients:
+    auto_subscribe: true
+    queries:
+      - >-
+        SELECT * FROM app.patient
+        WHERE deleted_at IS NULL
+          AND clinic_id IN (SELECT clinic_id FROM app.membership
+                            WHERE user_id = auth.user_id() AND status = 'active'
+                              AND (role = 'clinic_manager' OR role = 'org_admin'))
+
+  # Organization-wide admins (membership with no clinic): every patient in
+  # every clinic of their organization. Needs a join to reach organization_id.
+  # The patient table must not be aliased, or rows sync under the alias name.
+  org_patients:
+    auto_subscribe: true
+    queries:
+      - >-
+        SELECT patient.* FROM app.patient
+        JOIN app.clinic AS c ON patient.clinic_id = c.id
+        WHERE patient.deleted_at IS NULL
+          AND c.organization_id IN (SELECT organization_id FROM app.membership
+                                    WHERE user_id = auth.user_id() AND status = 'active'
+                                      AND role = 'org_admin' AND clinic_id IS NULL)

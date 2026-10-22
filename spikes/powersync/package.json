@@ -1,0 +1,21 @@
+{
+  "name": "@emb/powersync-spike",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node --experimental-strip-types seed.ts",
+    "compare": "node --experimental-strip-types compare.ts",
+    "revocation": "node --experimental-strip-types revocation.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@emb/db": "workspace:*",
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.15.0",
+    "typescript": "^5.8.0"
+  }
+}

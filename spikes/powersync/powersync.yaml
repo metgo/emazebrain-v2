@@ -1,0 +1,34 @@
+# Self-hosted PowerSync for the spike. Source database and bucket storage are
+# both Postgres (no MongoDB), which is what an eMazeBrain cell would run.
+migrations:
+  disable_auto_migration: false
+
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_SOURCE_URI
+      sslmode: disable # local spike only
+
+storage:
+  type: postgresql
+  uri: !env PS_STORAGE_URI
+  sslmode: disable # local spike only
+
+port: 8080
+
+sync_config:
+  path: sync-config.yaml
+
+client_auth:
+  audience: ["powersync-dev", "powersync"]
+  jwks:
+    keys:
+      - kty: oct
+        kid: spike
+        alg: HS256
+        k: !env PS_HS256_KEY # local test key only; production uses Ed25519 (OKP) keys from the API
+
+system:
+  logging:
+    level: info
+    format: text
