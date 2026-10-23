@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="system">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#5B4BDB" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>eMazeBrain</title>
+    <script>
+      // Apply the saved language, direction and theme before first paint.
+      (function () {
+        var d = document.documentElement;
+        try {
+          var loc = localStorage.getItem("emb.locale");
+          if (loc !== "he" && loc !== "en") {
+            loc = "en";
+            var prefs = navigator.languages || [navigator.language || "en"];
+            for (var i = 0; i < prefs.length; i++) {
+              var p = String(prefs[i]).slice(0, 2).toLowerCase();
+              if (p === "he" || p === "iw") { loc = "he"; break; }
+              if (p === "en") break;
+            }
+          }
+          d.lang = loc;
+          d.dir = loc === "he" ? "rtl" : "ltr";
+          var t = localStorage.getItem("emb.theme");
+          if (t === "light" || t === "dark") d.dataset.theme = t;
+          if (localStorage.getItem("emb.motion") === "reduce") d.dataset.motion = "reduce";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

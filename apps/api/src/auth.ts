@@ -24,6 +24,13 @@ export interface AuthConfig {
   rateLimit?: boolean;
   /** Connection pool for the auth schema; created from databaseUrl when omitted. */
   pool?: pg.Pool;
+  /**
+   * Headers that carry the client IP, set by the load balancer in front of the
+   * API (never trust these when the API is reachable directly). Without one,
+   * every client shares a single rate-limit bucket and one clinic could lock
+   * out everyone.
+   */
+  ipAddressHeaders?: string[];
 }
 
 export function authPool(databaseUrl: string): pg.Pool {
@@ -52,6 +59,7 @@ export function createAuth(config: AuthConfig, servicePool: pg.Pool) {
     advanced: {
       database: { generateId: () => uuidv7() },
       cookiePrefix: "emb",
+      ipAddress: { ipAddressHeaders: config.ipAddressHeaders ?? ["x-forwarded-for"] },
     },
     databaseHooks: {
       user: {

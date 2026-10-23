@@ -32,3 +32,15 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: End-to-end (Playwright + axe)
+        run: |
+          pnpm --filter @emb/web exec playwright install --with-deps chromium
+          pnpm --filter @emb/web e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          retention-days: 7

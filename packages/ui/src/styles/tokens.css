@@ -1,0 +1,180 @@
+/*
+ * Design tokens (design doc §7.1–7.5). Every app reads these; components never
+ * hard-code a colour, size or duration. Contrast values are in the doc.
+ *
+ * Theme: <html data-theme="light|dark|system">. "system" follows the OS.
+ */
+
+:root {
+  /* Colour: light */
+  --bg-canvas: #f6f7fb;
+  --bg-surface: #ffffff;
+  --bg-subtle: #eef0f6;
+  --text-primary: #111827;
+  --text-secondary: #5b6474;
+  --text-on-brand: #ffffff;
+  --border-decorative: #e2e5ee;
+  --border-control: #8b93a3;
+  --brand-primary: #5b4bdb;
+  --brand-primary-hover: #4a3bc4;
+  --brand-primary-subtle: #eeebff;
+  --focus-ring: #5b4bdb;
+  --status-success: #1e7f4f;
+  --status-success-subtle: #e3f4ea;
+  --status-warning: #8a5a00;
+  --status-warning-subtle: #fff4d6;
+  --status-danger: #b42318;
+  --status-danger-subtle: #fdeceb;
+  --status-info: #0b6e99;
+  --status-info-subtle: #e2f2fa;
+  --hemi-warm: #c2410c;
+  --hemi-cold: #0b6e99;
+  --scrim: rgb(17 24 39 / 0.4);
+
+  /* Elevation: light mode uses shadows */
+  --elev-1: 0 1px 2px rgb(17 24 39 / 0.06), 0 1px 3px rgb(17 24 39 / 0.04);
+  --elev-2: 0 4px 12px rgb(17 24 39 / 0.08), 0 2px 4px rgb(17 24 39 / 0.04);
+  --elev-3: 0 16px 32px rgb(17 24 39 / 0.12), 0 4px 8px rgb(17 24 39 / 0.06);
+
+  /* Typography (§7.2) */
+  --font-ui: "Inter Variable", "Rubik Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Rubik Variable", "Inter Variable", system-ui, sans-serif;
+  --text-12: 0.75rem;
+  --text-14: 0.875rem;
+  --text-16: 1rem;
+  --text-18: 1.125rem;
+  --text-20: 1.25rem;
+  --text-24: 1.5rem;
+  --text-30: 1.875rem;
+  --text-36: 2.25rem;
+  --leading-body: 1.5;
+  --leading-tight: 1.25;
+
+  /* Spacing: 4-pt base (§7.3) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --content-padding: var(--space-6);
+
+  /* Shape */
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-sheet: 16px;
+  --radius-pill: 999px;
+
+  /* Targets (§7.6) */
+  --target-min: 44px;
+
+  /* Motion (§7.5) */
+  --dur-press: 120ms;
+  --dur-enter: 200ms;
+  --dur-exit: 160ms;
+  --dur-sheet: 280ms;
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Shell (§4.2) */
+  --rail-expanded: 240px;
+  --rail-collapsed: 72px;
+  --topbar-height: 64px;
+  --bottom-tabs-height: 64px;
+
+  color-scheme: light;
+}
+
+/* Hebrew and Arabic: Rubik first, taller lines (§7.2) */
+:root:lang(he),
+:root:lang(ar) {
+  --font-ui: "Rubik Variable", "Inter Variable", "Assistant", system-ui, sans-serif;
+  --leading-body: 1.6;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --content-padding: var(--space-4);
+  }
+}
+
+/* Colour: dark. Lighter surfaces instead of shadows. */
+:root[data-theme="dark"] {
+  --bg-canvas: #0e1016;
+  --bg-surface: #171a22;
+  --bg-subtle: #1f232d;
+  --text-primary: #e6e8f0;
+  --text-secondary: #a3aab8;
+  --text-on-brand: #0e1016;
+  --border-decorative: #2a2f3a;
+  --border-control: #6b7385;
+  --brand-primary: #a99eff;
+  --brand-primary-hover: #c0b8ff;
+  --brand-primary-subtle: #2a2550;
+  --focus-ring: #a99eff;
+  --status-success: #4ade80;
+  --status-success-subtle: #12301f;
+  --status-warning: #fbbf24;
+  --status-warning-subtle: #33270a;
+  --status-danger: #f97066;
+  --status-danger-subtle: #3a1714;
+  --status-info: #7cc8f0;
+  --status-info-subtle: #0f2a38;
+  --hemi-warm: #fdba74;
+  --hemi-cold: #7cc8f0;
+  --scrim: rgb(0 0 0 / 0.6);
+  --elev-1: 0 0 0 1px var(--border-decorative);
+  --elev-2: 0 0 0 1px var(--border-decorative), 0 8px 24px rgb(0 0 0 / 0.4);
+  --elev-3: 0 0 0 1px var(--border-decorative), 0 16px 40px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg-canvas: #0e1016;
+    --bg-surface: #171a22;
+    --bg-subtle: #1f232d;
+    --text-primary: #e6e8f0;
+    --text-secondary: #a3aab8;
+    --text-on-brand: #0e1016;
+    --border-decorative: #2a2f3a;
+    --border-control: #6b7385;
+    --brand-primary: #a99eff;
+    --brand-primary-hover: #c0b8ff;
+    --brand-primary-subtle: #2a2550;
+    --focus-ring: #a99eff;
+    --status-success: #4ade80;
+    --status-success-subtle: #12301f;
+    --status-warning: #fbbf24;
+    --status-warning-subtle: #33270a;
+    --status-danger: #f97066;
+    --status-danger-subtle: #3a1714;
+    --status-info: #7cc8f0;
+    --status-info-subtle: #0f2a38;
+    --hemi-warm: #fdba74;
+    --hemi-cold: #7cc8f0;
+    --scrim: rgb(0 0 0 / 0.6);
+    --elev-1: 0 0 0 1px var(--border-decorative);
+    --elev-2: 0 0 0 1px var(--border-decorative), 0 8px 24px rgb(0 0 0 / 0.4);
+    --elev-3: 0 0 0 1px var(--border-decorative), 0 16px 40px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+}
+
+/* Reduced motion: the OS setting, or the in-app switch (data-motion="reduce") */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 0ms;
+    --dur-enter: 1ms;
+    --dur-exit: 1ms;
+    --dur-sheet: 1ms;
+  }
+}
+:root[data-motion="reduce"] {
+  --dur-press: 0ms;
+  --dur-enter: 1ms;
+  --dur-exit: 1ms;
+  --dur-sheet: 1ms;
+}

@@ -7,7 +7,8 @@
     "dev": "node --experimental-strip-types --watch src/server.ts",
     "start": "node --experimental-strip-types src/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:dev": "node --experimental-strip-types scripts/seed-dev.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.0",

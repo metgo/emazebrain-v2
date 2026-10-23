@@ -8,3 +8,6 @@ coverage/
 !.env.example
 .DS_Store
 .pgdata/
+dist-demo/
+test-results/
+playwright-report/

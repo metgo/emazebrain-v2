@@ -178,6 +178,30 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
     expect((await super_.query(`SELECT * FROM app.verify_audit_chain()`)).rows).toEqual([]);
   });
 
+  it("narrows the list to one clinic without widening what RLS allows", async () => {
+    const other = uuidv7();
+    const stranger = uuidv7();
+    await super_.query(`INSERT INTO app.clinic (id, organization_id, name, country_code, timezone) VALUES ($1,$2,'Other','IL','Asia/Jerusalem')`, [other, ids.org]);
+    await super_.query(`INSERT INTO app.patient (id, clinic_id, given_name, family_name, date_of_birth, status) VALUES ($1,$2,'Tamar','Synthetic','2017-05-05','active')`, [stranger, other]);
+
+    const api = client(app);
+    await api("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
+    await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: totp(secret) } });
+
+    const mine = await api(`/v1/patients?clinic=${ids.clinic}`);
+    expect(mine.body.patients.map((p: { id: string }) => p.id)).toEqual([ids.mine]);
+    expect(mine.body.patients[0].date_of_birth).toBe("2018-03-01");
+    expect((await api(`/v1/patients?clinic=${other}`)).body.patients).toEqual([]);
+    expect((await api(`/v1/patients?clinic=nope`)).status).toBe(400);
+
+    const { rows } = await super_.query(
+      `SELECT clinic_id FROM app.audit_event WHERE actor_user_id = $1 AND action = 'list' ORDER BY chain_seq DESC LIMIT 2`,
+      [userId],
+    );
+    // Newest first: the unknown clinic is not written into its log; the user's own clinic is.
+    expect(rows).toEqual([{ clinic_id: null }, { clinic_id: ids.clinic }]);
+  });
+
   it("rate-limits repeated two-factor guesses", async () => {
     const api = client(limited);
     await api("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
