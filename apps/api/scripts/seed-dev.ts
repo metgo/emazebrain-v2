@@ -42,6 +42,12 @@ if (existing.rowCount) {
   const yael = await signUp(SEED.email, SEED.name);
   const dana = await signUp(`dana@${SYNTHETIC_EMAIL_DOMAIN}`, "Dana Kaplan");
   const ronit = await signUp(`ronit@${SYNTHETIC_EMAIL_DOMAIN}`, "Ronit Avraham");
+  // More therapists, so each end-to-end journey can sign in as its own person.
+  const extra = [
+    await signUp(`gil@${SYNTHETIC_EMAIL_DOMAIN}`, "Gil Mizrahi"),
+    await signUp(`tal@${SYNTHETIC_EMAIL_DOMAIN}`, "Tal Peretz"),
+    await signUp(`shira@${SYNTHETIC_EMAIL_DOMAIN}`, "Shira Ben David"),
+  ];
 
   const org = uuidv7();
   const clinics = [
@@ -55,6 +61,7 @@ if (existing.rowCount) {
     await admin.query(`INSERT INTO app.membership (user_id, organization_id, clinic_id, role) VALUES ($1,$2,$3,'therapist')`, [yael, org, c.id]);
     if (i === 0) {
       await admin.query(`INSERT INTO app.membership (user_id, organization_id, clinic_id, role) VALUES ($1,$2,$3,'therapist'), ($4,$2,$3,'clinic_manager')`, [dana, org, c.id, ronit]);
+      for (const u of extra) await admin.query(`INSERT INTO app.membership (user_id, organization_id, clinic_id, role) VALUES ($1,$2,$3,'therapist')`, [u, org, c.id]);
     }
     const people = syntheticPatients(i === 0 ? 14 : 5, { seed: 7 + i, locale: i === 0 ? "mixed" : "he" });
     for (const [n, p] of people.entries()) {
@@ -65,6 +72,8 @@ if (existing.rowCount) {
         [id, c.id, p.given_name, p.family_name, p.date_of_birth, p.preferred_locale, yael],
       );
       await admin.query(`INSERT INTO app.patient_care_team (patient_id, user_id) VALUES ($1,$2)`, [id, yael]);
+      // Tal and Shira share Yael's Tel Aviv caseload as secondary therapists.
+      if (i === 0) for (const u of extra.slice(1)) await admin.query(`INSERT INTO app.patient_care_team (patient_id, user_id, role) VALUES ($1,$2,'secondary')`, [id, u]);
       const g = syntheticGuardian(p, 1000 * (i + 1) + n);
       const gid = uuidv7();
       await admin.query(

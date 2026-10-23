@@ -1,0 +1,28 @@
+{
+  "name": "@emb/game-runtime",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Game Runtime (design doc C4, \u00a78): runs inside the sandboxed frame, owns Session Rules, the shared HUD and the results envelope. Builds one self-contained frame bundle per game.",
+  "exports": {
+    "./protocol": "./src/protocol.ts",
+    "./frames/*": "./dist/frames/*"
+  },
+  "scripts": {
+    "build": "node scripts/build-frames.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@emb/game-catch-me": "workspace:*",
+    "@emb/game-sdk": "workspace:*",
+    "@emb/session-rules": "workspace:*"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.4.0",
+    "vitest": "^3.2.0",
+    "@types/node": "^22.15.0"
+  }
+}

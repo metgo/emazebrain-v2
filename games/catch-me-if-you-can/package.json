@@ -1,0 +1,23 @@
+{
+  "name": "@emb/game-catch-me",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Catch Me If You Can (design doc \u00a78.4): find the tile that's a little different. Imports only @emb/game-sdk and its renderer.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@emb/game-sdk": "workspace:*",
+    "pixi.js": "^8.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

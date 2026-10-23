@@ -14,6 +14,7 @@ import { EditPatientPage, NewPatientPage } from "./routes/patients/form.tsx";
 import { PatientFamily, PatientLayout, PatientOverview } from "./routes/patients/detail.tsx";
 import { ConsentPage } from "./routes/patients/consent.tsx";
 import { TeamPage } from "./routes/team.tsx";
+import { GamePage, GamePreviewPage, LibraryPage } from "./routes/library.tsx";
 import { useIdleTimeout } from "./lib/idle.ts";
 import { useSignOut } from "./shell/ClinicShell.tsx";
 import { ClinicShell } from "./shell/ClinicShell.tsx";
@@ -66,7 +67,10 @@ export const routes: RouteObject[] = [
   { path: "/setup-mfa", element: <SetupMfaPage /> },
   {
     element: <RequireStaff bare />,
-    children: [{ path: "/patients/:id/consent", element: <ConsentPage /> }],
+    children: [
+      { path: "/patients/:id/consent", element: <ConsentPage /> },
+      { path: "/library/:gameId/preview", element: <GamePreviewPage /> },
+    ],
   },
   {
     element: <RequireStaff />,
@@ -86,7 +90,8 @@ export const routes: RouteObject[] = [
       { path: "/team", element: <TeamPage /> },
       { path: "/calendar", element: <ComingSoonPage area="calendar" /> },
       { path: "/protocols", element: <ComingSoonPage area="protocols" /> },
-      { path: "/library", element: <ComingSoonPage area="library" /> },
+      { path: "/library", element: <LibraryPage /> },
+      { path: "/library/:gameId", element: <GamePage /> },
       { path: "/messages", element: <ComingSoonPage area="messages" /> },
       { path: "/reports", element: <ComingSoonPage area="reports" /> },
       { path: "/settings", element: <SettingsPage /> },

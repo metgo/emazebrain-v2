@@ -9,6 +9,35 @@ export type { EndReason, SessionMode, SessionStatus };
 export type Palette = "warm" | "cold";
 export type Locale = "he" | "en" | "ar" | "ru" | "fr" | "es" | "zh";
 
+/** A JSON Schema (draft 2020-12 subset) for a game's own parameters, with x-ui hints for the generated settings form. */
+export interface ParamsSchema {
+  type: "object";
+  properties: Record<
+    string,
+    {
+      type: "integer" | "number" | "boolean" | "string";
+      enum?: Array<string | number>;
+      minimum?: number;
+      maximum?: number;
+      default?: unknown;
+      "x-ui"?: { label: LocalText; help?: LocalText; widget?: "slider" | "switch" | "select" | "segmented"; step?: number; options?: Record<string, LocalText> };
+    }
+  >;
+  additionalProperties?: false;
+}
+
+export type LocalText = Partial<Record<Locale, string>> & { en: string };
+
+/** A metric the game reports, shown in trend charts (design doc §8.3 metrics.json). */
+export interface MetricDefinition {
+  key: string;
+  label: LocalText;
+  unit: "ratio" | "ms" | "count" | "score" | "delta_e" | "index";
+  lowerIsBetter: boolean;
+  /** Skills this metric informs (taxonomy codes). */
+  skills?: string[];
+}
+
 export interface GameManifest {
   id: string;
   name: Partial<Record<Locale, string>> & { en: string };
@@ -28,10 +57,15 @@ export interface GameManifest {
   };
   recommendedMode?: SessionMode;
   recommendedDurationS?: number;
-  lifeLossEvents: Array<{ id: string; label: Partial<Record<Locale, string>> & { en: string } }>;
+  lifeLossEvents: Array<{ id: string; label: LocalText }>;
   qualifyingInteraction: string;
-  paramsSchema: string;
-  metrics: string;
+  /** The game's own parameters (namespaced by the game id when stored, e.g. catch_me.cvd_mode). */
+  paramsSchema: ParamsSchema;
+  metrics: MetricDefinition[];
+  /** Short description for the library card. */
+  summary: LocalText;
+  ageRange: [number, number];
+  minutes: number;
   assetPacks: Record<Palette | "shared", string>;
   taxonomy: { skills: string[]; regions: string[] };
   sizeBytes: { core: number; warm: number; cold: number };
@@ -110,10 +144,20 @@ export interface AssetPack {
 
 export interface InitContext {
   params: PlatformParams & Record<string, unknown>;
-  assets: AssetPack;
+  /** Asset pack for the hemisphere's palette. Games drawn in code may ignore it. */
+  assets: AssetPack | null;
+  /** Seeded from params.seed: the only source of randomness a game may use. */
   rng: () => number;
-  i18n: (key: string) => string;
+  /** The game's own strings in params.lang, with {name} placeholders filled. */
+  t: (key: string, vars?: Record<string, string | number>) => string;
   session: SessionApi;
+  /** Element the game renders into. It fills the frame; the HUD sits above it. */
+  mount: HTMLElement;
+  /** OS setting or the in-app switch: no shake, parallax or particle bursts. */
+  reducedMotion: boolean;
+  /** Palette tokens for the hemisphere (design doc §7.1): g50…g900, accent1, accent2, heart, success, error. */
+  palette: Palette;
+  tokens: Record<string, string>;
 }
 
 export type PauseReason = "app_hidden" | "manual" | "instructions" | "therapist_hold" | "focus_lost";
@@ -130,3 +174,11 @@ export interface GameModule {
 }
 
 export type CreateGame = () => GameModule;
+
+/** What a game package exports. */
+export interface GameDefinition {
+  manifest: GameManifest;
+  create: CreateGame;
+  /** Instruction and feedback strings by locale (at least en and he). */
+  strings: Partial<Record<Locale, Record<string, string>>> & { en: Record<string, string> };
+}

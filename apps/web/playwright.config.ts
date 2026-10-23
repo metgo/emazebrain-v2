@@ -20,7 +20,13 @@ export default defineConfig({
     locale: "en-US",
     timezoneId: "Asia/Jerusalem",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } }],
+  projects: [
+    {
+      name: "chromium",
+      // Headless Chromium has no GPU; allow its software WebGL so games can render.
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 }, launchOptions: { args: ["--enable-unsafe-swiftshader"] } },
+    },
+  ],
   webServer: [
     {
       command: "node --experimental-strip-types e2e/start-api.ts",
