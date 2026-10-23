@@ -302,6 +302,9 @@ class CatchMe implements GameModule {
   }
 
   private clearBoards() {
+    // The trial-window bar lives on the fx layer but is reused across boards: detach it before destroying the rest,
+    // or the next tick draws on a destroyed Graphics, throws, and stops the ticker (the game freezes after one board).
+    this.fx.removeChild(this.windowBar);
     for (const c of this.boardsLayer.removeChildren()) c.destroy({ children: true });
     for (const c of this.fx.removeChildren()) c.destroy({ children: true });
     this.tileRects.clear();

@@ -17,6 +17,9 @@ async function stopFromPauseMenu(page: Page) {
   await page.mouse.up();
 }
 
+// The game renders continuously with software WebGL in CI, which is slow: allow more than the default 30 s.
+test.describe.configure({ timeout: 90_000 });
+
 test("the library lists games and previews Catch Me If You Can in both palettes", async ({ page }) => {
   await enrol(page, "gil@synthetic.test");
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Library" }).click();
@@ -46,10 +49,16 @@ test("the library lists games and previews Catch Me If You Can in both palettes"
   await page.waitForTimeout(600);
   await shot(page, "33-game-warm");
 
-  // Tap a tile: the centre of the first quarter of the board.
+  // Tap a tile on two boards in a row: the centre of the first quarter of the board.
+  // Each tap draws a new board; a rendering error there used to freeze the game after the first one.
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
   const box = (await frame.boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2 - 60, box.y + box.height / 2 - 40);
-  await page.waitForTimeout(1500);
+  for (let i = 0; i < 2; i++) {
+    await page.mouse.click(box.x + box.width / 2 - 60, box.y + box.height / 2 - 40);
+    await page.waitForTimeout(1500);
+  }
+  expect(errors).toEqual([]);
 
   await stopFromPauseMenu(page);
   await expect(game.getByRole("heading", { name: "Great effort!" })).toBeVisible();

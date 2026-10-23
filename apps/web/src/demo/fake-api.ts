@@ -571,12 +571,17 @@ async function handle(path: string, method: string, q: URLSearchParams, body: Re
         const gid = body.guardian_id as string | undefined;
         if (gid && !p.legal[gid]) return json({ error: "not_legal_guardian" }, 422);
         const guardian = db.guardians.find((x) => x.id === gid);
-        const decision = body.decision === "withdrawn" ? "withdrawn" : "granted";
-        db.consents.push({ patient_id: p.id, purpose: body.purpose as Consent["purpose"], decision, signed_at: new Date().toISOString(), signer_name: (body.signer_name as string) ?? guardian?.full_name ?? null, guardian_name: guardian?.full_name ?? null, captured_by_name: a.name });
-        // Same as the database trigger: consent for clinic sessions unlocks the patient; withdrawing it locks them again.
-        if (body.purpose === "treatment") {
-          if (decision === "granted" && (p.status === "pending_consent" || p.status === "consent_legacy")) p.status = "active";
-          if (decision === "withdrawn" && p.status === "active") p.status = "pending_consent";
+        const decisions = Object.entries((body.decisions as Record<string, string | undefined>) ?? {}).filter(([, d]) => d === "granted" || d === "withdrawn");
+        if (!decisions.length) return json({ error: "validation", issues: [{ path: ["decisions"], message: "no_decisions" }] }, 422);
+        const signedAt = new Date().toISOString();
+        for (const [purpose, d] of decisions) {
+          const decision = d as Consent["decision"];
+          db.consents.push({ patient_id: p.id, purpose: purpose as Consent["purpose"], decision, signed_at: signedAt, signer_name: (body.signer_name as string) ?? guardian?.full_name ?? null, guardian_name: guardian?.full_name ?? null, captured_by_name: a.name });
+          // Same as the database trigger: consent for clinic sessions unlocks the patient; withdrawing it locks them again.
+          if (purpose === "treatment") {
+            if (decision === "granted" && (p.status === "pending_consent" || p.status === "consent_legacy")) p.status = "active";
+            if (decision === "withdrawn" && p.status === "active") p.status = "pending_consent";
+          }
         }
         return done(json({ patient: detail(db, p) }, 201));
       }
