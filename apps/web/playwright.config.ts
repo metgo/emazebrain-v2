@@ -13,7 +13,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  // On CI the "github" reporter turns failures into annotations we can read without downloading artifacts.
+  reporter: process.env.CI ? [["github"], ["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
     trace: "retain-on-failure",
