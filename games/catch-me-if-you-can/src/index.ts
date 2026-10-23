@@ -47,7 +47,7 @@ class CatchMe implements GameModule {
       ...(typeof p.start_level === "number" ? { startLevel: p.start_level } : {}),
       ...(p.max_level ? { maxLevel: p.max_level } : {}),
       palette: ctx.palette,
-      cvdMode: p["catch_me.cvd_mode"] === true,
+      cvdMode: p["catch_me_if_you_can.cvd_mode"] === true, // game settings arrive namespaced by game id
       staircase: p.session_mode === "timed",
       rng: ctx.rng,
     });

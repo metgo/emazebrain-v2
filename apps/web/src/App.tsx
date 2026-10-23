@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, createHashRouter, useLocation, type RouteObject } from "react-router";
 import { MazeLoader } from "@emb/ui";
 import { ApiError } from "./api/http.ts";
@@ -19,6 +19,8 @@ import { AssignPage, ProtocolsPage, TemplateBuilderPage } from "./routes/protoco
 import { useIdleTimeout } from "./lib/idle.ts";
 import { useSignOut } from "./shell/ClinicShell.tsx";
 import { ClinicShell } from "./shell/ClinicShell.tsx";
+import { SessionPage } from "./session/SessionPage.tsx";
+import { flush } from "./session/outbox.ts";
 
 /**
  * Staff-only area. /v1/me decides: 401 → sign in (and come back here),
@@ -49,9 +51,25 @@ export function RequireStaff({ bare = false }: { bare?: boolean }) {
   }
   return (
     <ClinicProvider memberships={me.data.memberships}>
+      <OutboxFlusher />
       {bare ? <BareScreen /> : <ClinicShell me={me.data} />}
     </ClinicProvider>
   );
+}
+
+/** Results waiting on this device are sent once someone is signed in, and again whenever the connection returns. */
+function OutboxFlusher() {
+  useEffect(() => {
+    void flush();
+    const again = () => void flush();
+    window.addEventListener("online", again);
+    const timer = window.setInterval(again, 60_000);
+    return () => {
+      window.removeEventListener("online", again);
+      window.clearInterval(timer);
+    };
+  }, []);
+  return null;
 }
 
 /** Full-screen staff pages without app navigation (e.g. a guardian signing consent). Still locks when idle. */
@@ -71,6 +89,7 @@ export const routes: RouteObject[] = [
     children: [
       { path: "/patients/:id/consent", element: <ConsentPage /> },
       { path: "/library/:gameId/preview", element: <GamePreviewPage /> },
+      { path: "/session/:plannedSessionId", element: <SessionPage /> },
     ],
   },
   {

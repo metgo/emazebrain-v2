@@ -1283,3 +1283,67 @@ a.gamecard:hover {
   font-size: var(--text-14);
   font-weight: 600;
 }
+
+/* ------------------------------------------------------------ Session runner (slice 4) */
+.nextup__start {
+  align-self: center;
+  flex-shrink: 0;
+}
+.run-games {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-6);
+  font-size: var(--text-18);
+  font-weight: 600;
+}
+/* Therapist corner: physical top-left would collide with a left-side timer, so it sits bottom, inline-start. */
+.run-corner {
+  position: fixed;
+  inset-block-end: calc(10px + env(safe-area-inset-bottom, 0px));
+  inset-inline-start: calc(10px + env(safe-area-inset-left, 0px));
+  display: grid;
+  place-items: center;
+  inline-size: var(--target-min);
+  block-size: var(--target-min);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgb(17 24 39 / 0.35);
+  color: rgb(255 255 255 / 0.85);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.run-corner--holding {
+  background: rgb(17 24 39 / 0.8);
+  outline: 3px solid var(--focus-ring, #ffffff);
+}
+.run-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--content-padding);
+  background: rgb(17 24 39 / 0.88);
+}
+.run-overlay > * {
+  inline-size: min(100%, 440px);
+}
+.run-menu {
+  display: grid;
+  gap: var(--space-3);
+}
+.run-count {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.run-prog {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  font-weight: 600;
+}

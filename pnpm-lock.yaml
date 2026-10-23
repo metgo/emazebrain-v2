@@ -251,6 +251,15 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  packages/progression:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.5)(jsdom@26.1.0)(yaml@2.9.1)
+
   packages/session-rules:
     devDependencies:
       typescript:

@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import pg from "pg";
 import { createApp } from "./app.ts";
 import { createAuth } from "./auth.ts";
+import { ticketSigner } from "./tickets.ts";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -26,7 +27,10 @@ const auth = createAuth(
   },
   pool,
 );
-const app = createApp(info, { pool, auth });
+// LAUNCH_SIGNING_KEY: PKCS#8 PEM Ed25519 key. Required in production so tickets survive restarts.
+if (!process.env.LAUNCH_SIGNING_KEY && process.env.NODE_ENV === "production") throw new Error("LAUNCH_SIGNING_KEY is not set");
+const tickets = ticketSigner(process.env.LAUNCH_SIGNING_KEY?.replace(/\\n/g, "\n"));
+const app = createApp(info, { pool, auth, tickets });
 
 serve({ fetch: app.fetch, port }, (s) => {
   console.log(`api listening on :${s.port} (cell ${info.cell})`);

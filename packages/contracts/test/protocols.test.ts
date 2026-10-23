@@ -46,3 +46,10 @@ describe("scheduleDates", () => {
     expect(scheduleDates("2026-11-01", 6, 2)).toHaveLength(12);
   });
 });
+
+import { canonicalJson } from "../src/sessions.ts";
+describe("canonicalJson", () => {
+  it("sorts keys recursively and drops undefined", () => {
+    expect(canonicalJson({ b: 1, a: { d: [2, { z: 1, y: 2 }], c: undefined } })).toBe('{"a":{"d":[2,{"y":2,"z":1}]},"b":1}');
+  });
+});

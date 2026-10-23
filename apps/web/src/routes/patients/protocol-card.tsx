@@ -1,5 +1,6 @@
 /** The patient's running protocol (design doc §5.5): progress, next session, steps, pause/stop. */
 import { useState } from "react";
+import { Link } from "react-router";
 import { useIntl } from "react-intl";
 import { Pause, Play, Square } from "lucide-react";
 import { Button, Card, Chip, ConfirmDialog, MazeLoader } from "@emb/ui";
@@ -11,7 +12,7 @@ import { LoadError } from "../shared.tsx";
 import { NoProtocolCard } from "../protocols/pages.tsx";
 import { useStepSummary } from "../protocols/steps.tsx";
 
-export function ProtocolCard({ patientId, archived }: { patientId: string; archived: boolean }) {
+export function ProtocolCard({ patientId, archived, canPlay }: { patientId: string; archived: boolean; canPlay: boolean }) {
   const t = useT();
   const intl = useIntl();
   const { locale } = usePrefs();
@@ -58,6 +59,12 @@ export function ProtocolCard({ patientId, archived }: { patientId: string; archi
       </ol>
       {!archived && (
         <div className="pform__actions">
+          {a.status === "active" && next && canPlay && (
+            <Link to={`/session/${next.id}`} className="emb-btn emb-btn--primary">
+              <Play size={18} aria-hidden="true" />
+              <span>{t("run.startSession", { seq: next.seq })}</span>
+            </Link>
+          )}
           {a.status === "active" ? (
             <Button variant="secondary" icon={<Pause size={18} aria-hidden="true" />} loading={update.isPending} onClick={() => update.mutate({ id: a.id, status: "paused" })}>
               {t("protocol.pause")}

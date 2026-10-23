@@ -38,7 +38,7 @@ Run the clinic app locally (synthetic data only):
 ```bash
 export DATABASE_URL=postgres://postgres@localhost:5432/emb_dev AUTH_SECRET=$(openssl rand -hex 32)
 pnpm --filter @emb/api seed:dev                                   # prints the therapist's email and password
-TRUSTED_ORIGINS=http://localhost:5173 pnpm --filter @emb/api dev  # API on :8787
+TRUSTED_ORIGINS=http://localhost:5173 pnpm --filter @emb/api dev  # API on :8787 (set LAUNCH_SIGNING_KEY in production, ADR 0006)
 pnpm --filter @emb/web dev                                        # app on http://localhost:5173
 ```
 

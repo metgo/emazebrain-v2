@@ -21,6 +21,7 @@ import {
   X,
   LogOut,
   ChevronRight,
+  Play,
 } from "lucide-react";
 import { Alert, Avatar, Button, Card, Chip, DataList, EmptyState, MazeLoader, PageHeader, Segmented, type ChipTone, type Column } from "@emb/ui";
 import { useMe, usePatients, useToday } from "../api/queries.ts";
@@ -31,6 +32,8 @@ import { useClinic } from "../lib/clinic.tsx";
 import { ageParts, calendarDate, dayPart, firstName, matchesQuery } from "../lib/format.ts";
 import { useTitle } from "../lib/title.ts";
 import { useSignOut } from "../shell/ClinicShell.tsx";
+import { SetPinForm } from "../session/SessionPage.tsx";
+import { hasPin } from "../session/kidmode.ts";
 
 
 // ------------------------------------------------------------------ Today
@@ -146,6 +149,12 @@ function NextUp() {
               )}
               {!it.patient.can_play && <Chip tone="warning">{t("patient.pending.title")}</Chip>}
             </div>
+            {it.patient.can_play && (
+              <Link to={`/session/${it.planned_session_id}`} className="emb-btn emb-btn--primary nextup__start" aria-label={t("run.startFor", { name: fullName(it.patient) })}>
+                <Play size={18} aria-hidden="true" />
+                <span aria-hidden="true">{t("run.startShort")}</span>
+              </Link>
+            )}
           </li>
         );
       })}
@@ -266,6 +275,7 @@ export function SettingsPage() {
             />
           </div>
         </Card>
+        <KidPinCard />
         <Card as="section" labelledBy="account">
           <h2 id="account" className="app-cardtitle">
             {t("settings.account")}
@@ -294,6 +304,38 @@ export function SettingsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Kid-mode PIN for this device (design doc §4.3). */
+function KidPinCard() {
+  const t = useT();
+  const [set, setSet] = useState(hasPin);
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  return (
+    <Card as="section" labelledBy="kidpin">
+      <h2 id="kidpin" className="app-cardtitle">
+        {t("kidpin.title")}
+      </h2>
+      <p className="app-muted">{t("kidpin.body")}</p>
+      {saved && <Alert tone="success">{t("kidpin.saved")}</Alert>}
+      {editing || !set ? (
+        <SetPinForm
+          onSaved={() => {
+            setSet(true);
+            setEditing(false);
+            setSaved(true);
+          }}
+        />
+      ) : (
+        <div className="settings__actions">
+          <Button variant="secondary" onClick={() => (setSaved(false), setEditing(true))}>
+            {t("kidpin.change")}
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 

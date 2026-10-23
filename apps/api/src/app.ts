@@ -6,6 +6,8 @@ import { meRoutes } from "./modules/me/routes.ts";
 import { patientRoutes } from "./modules/patients/routes.ts";
 import { clinicRoutes } from "./modules/clinics/routes.ts";
 import { protocolRoutes } from "./modules/protocols/routes.ts";
+import { sessionRoutes } from "./modules/sessions/routes.ts";
+import { ticketSigner, type TicketSigner } from "./tickets.ts";
 
 export interface AppInfo {
   cell: string;
@@ -16,6 +18,8 @@ export interface AppDeps {
   /** Service connection pool. Its user must be able to SET ROLE emb_app. */
   pool: pg.Pool;
   auth: Auth;
+  /** Signs launch tickets. Defaults to a throwaway key (fine for dev and tests, not production). */
+  tickets?: TicketSigner;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,6 +51,7 @@ export function createApp(info: AppInfo, deps?: AppDeps) {
     v1.route("/patients", patientRoutes(deps.pool));
     v1.route("/clinics", clinicRoutes(deps.pool));
     v1.route("/", protocolRoutes(deps.pool));
+    v1.route("/", sessionRoutes(deps.pool, deps.tickets ?? ticketSigner()));
     app.route("/v1", v1);
   }
 

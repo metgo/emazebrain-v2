@@ -42,3 +42,8 @@ export function dayPart(now: Date = new Date()): "morning" | "afternoon" | "even
 export function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
+
+/** Wraps a name in Unicode isolates so a Hebrew name in an English sentence (or the reverse) keeps its place. */
+export function iso(text: string): string {
+  return `\u2068${text}\u2069`;
+}

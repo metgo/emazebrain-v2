@@ -3,7 +3,15 @@ import { useEffect, useRef } from "react";
 /** Design doc §11.2: the web app locks after 15 minutes without input. */
 export const IDLE_LIMIT_MS = 15 * 60 * 1000;
 
-const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"] as const;
+const ACTIVITY = ["pointerdown", "keydown", "wheel", "touchstart", "scroll", "emb:activity"] as const;
+
+/**
+ * Input inside a sandboxed game frame never reaches this window, so the
+ * session runner reports the game's heartbeats here while a child plays.
+ */
+export function noteActivity() {
+  window.dispatchEvent(new Event("emb:activity"));
+}
 
 /**
  * Calls onIdle once after `limitMs` without user input. Checks elapsed wall

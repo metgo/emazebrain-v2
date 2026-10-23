@@ -238,7 +238,7 @@ export function PatientOverview() {
         </dl>
       </Card>
       <div className="pstack">
-        <ProtocolCard patientId={p.id} archived={p.archived} />
+        <ProtocolCard patientId={p.id} archived={p.archived} canPlay={p.can_play} />
         <Card as="section" labelledBy="p-team">
           <h2 id="p-team" className="app-cardtitle">
             {t("patient.careTeam")}

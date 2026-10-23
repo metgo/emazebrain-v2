@@ -10,7 +10,7 @@ import type {
   UpdatePatient,
 } from "@emb/contracts";
 import { ApiError, apiGet, apiSend } from "./http.ts";
-import type { AssignInput, AssignmentView, TemplateDetail, TemplateInput, TemplateSummary, TodayItem } from "@emb/contracts";
+import type { AssignInput, AssignmentView, GameSessionView, LaunchPackage, TemplateDetail, TemplateInput, TemplateSummary, TodayItem } from "@emb/contracts";
 
 export type { PatientDetail, PatientListItem, PatientStatus, StaffMember };
 export type Role = "platform_admin" | "org_admin" | "clinic_manager" | "therapist" | "assistant";
@@ -207,6 +207,24 @@ export function useToday(clinicId: string | null) {
   return useQuery({
     queryKey: ["today", clinicId],
     queryFn: ({ signal }) => apiGet<{ items: TodayItem[] }>(`/v1/today${clinicId ? `?clinic=${clinicId}` : ""}`, { signal }).then((r) => r.items),
+    retry,
+  });
+}
+
+// ------------------------------------------------------------------ sessions (slice 4)
+
+export function useLaunch() {
+  return useMutation({
+    mutationFn: (plannedSessionId: string) => apiSend<{ launch: LaunchPackage }>("POST", `/v1/planned-sessions/${plannedSessionId}/launch`).then((r) => r.launch),
+  });
+}
+
+export const sessionsKey = (patientId: string) => ["sessions", patientId] as const;
+
+export function usePatientSessions(patientId: string) {
+  return useQuery({
+    queryKey: sessionsKey(patientId),
+    queryFn: ({ signal }) => apiGet<{ sessions: GameSessionView[] }>(`/v1/patients/${patientId}/sessions`, { signal }).then((r) => r.sessions),
     retry,
   });
 }

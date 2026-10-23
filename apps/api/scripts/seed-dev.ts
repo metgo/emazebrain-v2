@@ -48,6 +48,7 @@ if (existing.rowCount) {
     await signUp(`gil@${SYNTHETIC_EMAIL_DOMAIN}`, "Gil Mizrahi"),
     await signUp(`tal@${SYNTHETIC_EMAIL_DOMAIN}`, "Tal Peretz"),
     await signUp(`shira@${SYNTHETIC_EMAIL_DOMAIN}`, "Shira Ben David"),
+    await signUp(`noam@${SYNTHETIC_EMAIL_DOMAIN}`, "Noam Shapiro"),
   ];
 
   const org = uuidv7();
@@ -73,7 +74,7 @@ if (existing.rowCount) {
         [id, c.id, p.given_name, p.family_name, p.date_of_birth, p.preferred_locale, yael],
       );
       await admin.query(`INSERT INTO app.patient_care_team (patient_id, user_id) VALUES ($1,$2)`, [id, yael]);
-      // Tal and Shira share Yael's Tel Aviv caseload as secondary therapists.
+      // Tal, Shira and Noam share Yael's Tel Aviv caseload as secondary therapists.
       if (i === 0) for (const u of extra.slice(1)) await admin.query(`INSERT INTO app.patient_care_team (patient_id, user_id, role) VALUES ($1,$2,'secondary')`, [id, u]);
       const g = syntheticGuardian(p, 1000 * (i + 1) + n);
       const gid = uuidv7();

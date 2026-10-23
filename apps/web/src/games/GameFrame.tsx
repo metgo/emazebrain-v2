@@ -26,6 +26,8 @@ export interface GameFrameProps {
   title: string;
   loadingLabel: string;
   onStarted?: () => void;
+  /** Once a second while the game runs (used to keep the app's idle lock from firing mid-game). */
+  onHeartbeat?: () => void;
   onEnded?: (envelope: ResultEnvelope) => void;
   onClosed?: () => void;
   onError?: (message: string) => void;
