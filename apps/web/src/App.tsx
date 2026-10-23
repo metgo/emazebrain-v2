@@ -1,20 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, RouterProvider, createBrowserRouter, createHashRouter, useLocation, type RouteObject } from "react-router";
+import { Navigate, Outlet, RouterProvider, createBrowserRouter, createHashRouter, useLocation, type RouteObject } from "react-router";
 import { MazeLoader } from "@emb/ui";
 import { ApiError } from "./api/http.ts";
 import { useMe } from "./api/queries.ts";
 import { PrefsProvider, useT } from "./i18n/index.tsx";
 import { ClinicProvider } from "./lib/clinic.tsx";
 import { SetupMfaPage, SignInPage, VerifyPage } from "./routes/auth.tsx";
-import { ComingSoonPage, LoadError, MorePage, NotFoundPage, PatientPage, PatientsPage, SettingsPage, TodayPage } from "./routes/pages.tsx";
+import { ComingSoonPage, MorePage, NotFoundPage, SettingsPage, TodayPage } from "./routes/pages.tsx";
+import { LoadError } from "./routes/shared.tsx";
+import { PatientsPage } from "./routes/patients/list.tsx";
+import { EditPatientPage, NewPatientPage } from "./routes/patients/form.tsx";
+import { PatientFamily, PatientLayout, PatientOverview } from "./routes/patients/detail.tsx";
+import { ConsentPage } from "./routes/patients/consent.tsx";
+import { TeamPage } from "./routes/team.tsx";
+import { useIdleTimeout } from "./lib/idle.ts";
+import { useSignOut } from "./shell/ClinicShell.tsx";
 import { ClinicShell } from "./shell/ClinicShell.tsx";
 
 /**
  * Staff-only area. /v1/me decides: 401 → sign in (and come back here),
  * 403 mfa_required → enrolment, otherwise the shell.
  */
-export function RequireStaff() {
+export function RequireStaff({ bare = false }: { bare?: boolean }) {
   const me = useMe();
   const location = useLocation();
   const t = useT();
@@ -39,9 +47,16 @@ export function RequireStaff() {
   }
   return (
     <ClinicProvider memberships={me.data.memberships}>
-      <ClinicShell me={me.data} />
+      {bare ? <BareScreen /> : <ClinicShell me={me.data} />}
     </ClinicProvider>
   );
+}
+
+/** Full-screen staff pages without app navigation (e.g. a guardian signing consent). Still locks when idle. */
+function BareScreen() {
+  const signOut = useSignOut();
+  useIdleTimeout(() => void signOut("idle"));
+  return <Outlet />;
 }
 
 export const routes: RouteObject[] = [
@@ -50,11 +65,25 @@ export const routes: RouteObject[] = [
   { path: "/sign-in/verify", element: <VerifyPage /> },
   { path: "/setup-mfa", element: <SetupMfaPage /> },
   {
+    element: <RequireStaff bare />,
+    children: [{ path: "/patients/:id/consent", element: <ConsentPage /> }],
+  },
+  {
     element: <RequireStaff />,
     children: [
       { path: "/today", element: <TodayPage /> },
       { path: "/patients", element: <PatientsPage /> },
-      { path: "/patients/:id", element: <PatientPage /> },
+      { path: "/patients/new", element: <NewPatientPage /> },
+      { path: "/patients/:id/edit", element: <EditPatientPage /> },
+      {
+        path: "/patients/:id",
+        element: <PatientLayout />,
+        children: [
+          { index: true, element: <PatientOverview /> },
+          { path: "family", element: <PatientFamily /> },
+        ],
+      },
+      { path: "/team", element: <TeamPage /> },
       { path: "/calendar", element: <ComingSoonPage area="calendar" /> },
       { path: "/protocols", element: <ComingSoonPage area="protocols" /> },
       { path: "/library", element: <ComingSoonPage area="library" /> },

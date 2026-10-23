@@ -4,6 +4,7 @@ import type { Auth } from "./auth.ts";
 import { requireStaffSession, type Env } from "./context.ts";
 import { meRoutes } from "./modules/me/routes.ts";
 import { patientRoutes } from "./modules/patients/routes.ts";
+import { clinicRoutes } from "./modules/clinics/routes.ts";
 
 export interface AppInfo {
   cell: string;
@@ -43,11 +44,16 @@ export function createApp(info: AppInfo, deps?: AppDeps) {
     v1.use("*", requireStaffSession(deps.auth));
     v1.route("/me", meRoutes(deps.pool));
     v1.route("/patients", patientRoutes(deps.pool));
+    v1.route("/clinics", clinicRoutes(deps.pool));
     app.route("/v1", v1);
   }
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
+    // The database said no (RLS or a guard trigger): that's a permission answer, not a crash.
+    const code = (err as { code?: string }).code;
+    if (code === "42501") return c.json({ error: "forbidden" }, 403);
+    if (code === "23514" || code === "22007" || code === "22008") return c.json({ error: "invalid" }, 400);
     // Never echo internals; log the request id so it can be traced (no patient data in logs).
     console.error(`[${c.get("requestId")}]`, err.message);
     return c.json({ error: "internal_error", requestId: c.get("requestId") }, 500);

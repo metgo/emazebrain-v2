@@ -23,55 +23,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Alert, Avatar, Button, Card, Chip, DataList, EmptyState, MazeLoader, PageHeader, Segmented, type ChipTone, type Column } from "@emb/ui";
-import { ApiError } from "../api/http.ts";
-import { useMe, usePatient, usePatients, type PatientRow, type PatientStatus } from "../api/queries.ts";
+import { useMe, usePatients } from "../api/queries.ts";
+import { fullName, LoadError, StatusChip, useAge } from "./shared.tsx";
 import { useT, usePrefs, locales, type Locale, type MessageId, type Motion, type Theme } from "../i18n/index.tsx";
 import { useClinic } from "../lib/clinic.tsx";
 import { ageParts, calendarDate, dayPart, firstName, matchesQuery } from "../lib/format.ts";
 import { useTitle } from "../lib/title.ts";
 import { useSignOut } from "../shell/ClinicShell.tsx";
 
-const statusTone: Record<PatientStatus, ChipTone> = {
-  active: "success",
-  pending_consent: "warning",
-  consent_legacy: "warning",
-  inactive: "neutral",
-  discharged: "neutral",
-};
-
-const fullName = (p: { given_name: string; family_name: string }) => `${p.given_name} ${p.family_name}`;
-
-function useAge() {
-  const t = useT();
-  return (dob: string) => {
-    const { years, months } = ageParts(dob);
-    return years >= 2 ? t("age.years", { years }) : t("age.months", { months });
-  };
-}
-
-function StatusChip({ status }: { status: PatientStatus }) {
-  const t = useT();
-  return <Chip tone={statusTone[status] ?? "neutral"}>{t("patients.status", { status })}</Chip>;
-}
-
-export function LoadError({ error, retry }: { error: unknown; retry: () => void }) {
-  const t = useT();
-  const network = error instanceof ApiError && error.status === 0;
-  const ref = error instanceof ApiError ? error.requestId : undefined;
-  return (
-    <Alert
-      tone="danger"
-      title={t(network ? "errors.network" : "errors.generic")}
-      action={
-        <Button variant="secondary" onClick={retry}>
-          {t("common.retry")}
-        </Button>
-      }
-    >
-      {ref && <span className="app-ref">{t("errors.reference", { id: ref })}</span>}
-    </Alert>
-  );
-}
 
 // ------------------------------------------------------------------ Today
 
@@ -150,194 +109,6 @@ export function TodayPage() {
   );
 }
 
-// ------------------------------------------------------------------ Patients
-
-export function PatientsPage() {
-  const t = useT();
-  const intl = useIntl();
-  const { clinicId } = useClinic();
-  const patients = usePatients(clinicId);
-  const [params, setParams] = useSearchParams();
-  const query = params.get("q") ?? "";
-  const age = useAge();
-  useTitle(t("patients.title"));
-
-  const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true });
-  const rows = useMemo(() => (patients.data ?? []).filter((p) => matchesQuery([p.given_name, p.family_name, fullName(p)], query)), [patients.data, query]);
-
-  const columns: Column<PatientRow>[] = [
-    { id: "name", header: t("patients.col.name"), primary: true, cell: (p) => <bdi>{fullName(p)}</bdi> },
-    { id: "age", header: t("patients.col.age"), cell: (p) => age(p.date_of_birth) },
-    {
-      id: "dob",
-      header: t("patients.col.dob"),
-      hideOnCard: true,
-      cell: (p) => <span className="emb-tnum">{intl.formatDate(calendarDate(p.date_of_birth), { day: "numeric", month: "short", year: "numeric" })}</span>,
-    },
-    { id: "status", header: t("patients.col.status"), cell: (p) => <StatusChip status={p.status} /> },
-  ];
-
-  const total = patients.data?.length ?? 0;
-
-  return (
-    <div className="app-page">
-      <PageHeader title={t("patients.title")} description={patients.data ? t("patients.count", { count: total }) : undefined} />
-      {patients.isPending ? (
-        <MazeLoader label={t("common.loading")} />
-      ) : patients.isError ? (
-        <LoadError error={patients.error} retry={() => void patients.refetch()} />
-      ) : total === 0 ? (
-        <Card>
-          <EmptyState icon={<Users size={28} aria-hidden="true" />} title={t("patients.empty.title")}>
-            {t("patients.empty.body")}
-          </EmptyState>
-        </Card>
-      ) : (
-        <>
-          <div className="app-toolbar" role="search">
-            <label className="app-search">
-              <Search size={20} aria-hidden="true" className="app-search__icon" />
-              <span className="emb-vh">{t("patients.search")}</span>
-              <input
-                type="search"
-                className="emb-input app-search__input"
-                placeholder={t("patients.searchPlaceholder")}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                enterKeyHint="search"
-                autoComplete="off"
-              />
-            </label>
-            <span className="app-muted" aria-live="polite">
-              {query ? t("patients.results", { count: rows.length }) : ""}
-            </span>
-          </div>
-          {rows.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon={<SearchX size={28} aria-hidden="true" />}
-                title={t("patients.noMatch.title", { query })}
-                action={
-                  <Button variant="secondary" icon={<X size={18} aria-hidden="true" />} onClick={() => setQuery("")}>
-                    {t("patients.noMatch.clear")}
-                  </Button>
-                }
-              >
-                {t("patients.noMatch.body")}
-              </EmptyState>
-            </Card>
-          ) : (
-            <DataList
-              rows={rows}
-              columns={columns}
-              getRowKey={(p) => p.id}
-              caption={t("patients.caption")}
-              getRowHref={(p) => `/patients/${p.id}`}
-              renderLink={({ href, className, children }) => (
-                <Link to={href} className={className}>
-                  {children}
-                </Link>
-              )}
-              leading={(p) => <Avatar name={fullName(p)} size={40} />}
-            />
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ One patient
-
-export function PatientPage() {
-  const t = useT();
-  const intl = useIntl();
-  const { id = "" } = useParams();
-  const patient = usePatient(id);
-  const age = useAge();
-  const p = patient.data;
-  useTitle(p ? fullName(p) : t("patients.title"));
-
-  const back = (
-    <Link to="/patients" className="app-textlink app-back">
-      <ArrowLeft size={18} aria-hidden="true" className="emb-flip-rtl" />
-      {t("patient.back")}
-    </Link>
-  );
-
-  if (patient.isPending) return <MazeLoader label={t("common.loading")} />;
-  if (patient.isError) {
-    const notFound = patient.error instanceof ApiError && patient.error.status === 404;
-    return (
-      <div className="app-page">
-        {back}
-        <h1 className="emb-vh">{t(notFound ? "patient.notFound.title" : "errors.generic")}</h1>
-        {notFound ? (
-          <Card>
-            <EmptyState icon={<SearchX size={28} aria-hidden="true" />} title={t("patient.notFound.title")}>
-              {t("patient.notFound.body")}
-            </EmptyState>
-          </Card>
-        ) : (
-          <LoadError error={patient.error} retry={() => void patient.refetch()} />
-        )}
-      </div>
-    );
-  }
-  if (!p) return null;
-
-  const lang = p.preferred_locale ?? "";
-  return (
-    <div className="app-page">
-      {back}
-      <header className="phead">
-        <Avatar name={fullName(p)} size={64} />
-        <div className="phead__text">
-          <h1 className="phead__name">
-            <bdi>{fullName(p)}</bdi>
-          </h1>
-          <p className="phead__meta">
-            <span>{age(p.date_of_birth)}</span>
-            <StatusChip status={p.status} />
-          </p>
-        </div>
-      </header>
-      <div className="pgrid">
-        <Card as="section" labelledBy="p-details">
-          <h2 id="p-details" className="app-cardtitle">
-            {t("patient.details")}
-          </h2>
-          <dl className="app-dl">
-            <div>
-              <dt>{t("patient.dob")}</dt>
-              <dd className="emb-tnum">{intl.formatDate(calendarDate(p.date_of_birth), { day: "numeric", month: "long", year: "numeric" })}</dd>
-            </div>
-            <div>
-              <dt>{t("patient.age")}</dt>
-              <dd>{age(p.date_of_birth)}</dd>
-            </div>
-            <div>
-              <dt>{t("patient.status")}</dt>
-              <dd>
-                <StatusChip status={p.status} />
-              </dd>
-            </div>
-            <div>
-              <dt>{t("patient.language")}</dt>
-              <dd>{t("patient.languageName", { lang: lang || "none" })}</dd>
-            </div>
-          </dl>
-        </Card>
-        <Card as="section">
-          <EmptyState icon={<RouteIcon size={28} aria-hidden="true" />} title={t("patient.protocol.title")}>
-            {t("patient.protocol.body")}
-          </EmptyState>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
 // ------------------------------------------------------------------ Coming next
 
 const soon: Record<string, { title: MessageId; body: MessageId; icon: ComponentType<{ size?: number; "aria-hidden"?: "true" }> }> = {
@@ -369,11 +140,13 @@ export function ComingSoonPage({ area }: { area: keyof typeof soon }) {
 export function MorePage() {
   const t = useT();
   const signOut = useSignOut();
+  const { isManager } = useClinic();
   useTitle(t("nav.more"));
   const links: Array<{ to: string; label: MessageId; icon: ComponentType<{ size?: number; "aria-hidden"?: "true" }> }> = [
     { to: "/protocols", label: "nav.protocols", icon: RouteIcon },
     { to: "/library", label: "nav.library", icon: BookOpen },
     { to: "/reports", label: "nav.reports", icon: BarChart3 },
+    ...(isManager ? [{ to: "/team", label: "nav.team" as MessageId, icon: Users }] : []),
     { to: "/settings", label: "nav.settings", icon: SettingsIcon },
   ];
   return (

@@ -18,6 +18,7 @@ import {
   Route as RouteIcon,
   Settings as SettingsIcon,
   Users,
+  UsersRound,
 } from "lucide-react";
 import { AppShell, Avatar, Disclosure, Logo, SelectField, type ShellNavItem } from "@emb/ui";
 import { authClient } from "../api/auth.ts";
@@ -51,7 +52,7 @@ export function ClinicShell({ me }: { me: Me }) {
   const t = useT();
   const location = useLocation();
   const signOut = useSignOut();
-  const { clinics, clinicId, setClinicId } = useClinic();
+  const { clinics, clinicId, setClinicId, isManager } = useClinic();
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem("emb.rail") === "collapsed";
@@ -99,7 +100,7 @@ export function ClinicShell({ me }: { me: Me }) {
       items={items}
       tabIds={PHONE_TABS}
       more={more}
-      isActive={(i) => (i.id === "more" ? ["/more", "/protocols", "/library", "/reports", "/settings"].some((p) => location.pathname.startsWith(p)) : isActive(i))}
+      isActive={(i) => (i.id === "more" ? ["/more", "/protocols", "/library", "/reports", "/settings", "/team"].some((p) => location.pathname.startsWith(p)) : isActive(i))}
       renderLink={({ href: to, className, children, ...rest }) => (
         <Link to={to} className={className} {...rest}>
           {children}
@@ -150,6 +151,11 @@ export function ClinicShell({ me }: { me: Me }) {
                     </div>
                   </div>
                   <hr className="emb-menusep" />
+                  {isManager && (
+                    <MenuLink to="/team" onDone={close} icon={<UsersRound size={20} aria-hidden="true" />}>
+                      {t("nav.team")}
+                    </MenuLink>
+                  )}
                   <MenuLink to="/settings" onDone={close} icon={<SettingsIcon size={20} aria-hidden="true" />}>
                     {t("nav.settings")}
                   </MenuLink>

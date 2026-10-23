@@ -130,7 +130,7 @@ describe.skipIf(!ADMIN_URL)("row-level security", () => {
   it("a therapist cannot move a patient to another clinic", async () => {
     await expect(
       asUser(ids.therapistA, (c) => c.query(`UPDATE app.patient SET clinic_id = $1 WHERE id = $2`, [ids.clinic2, ids.p1])),
-    ).rejects.toThrow(/row-level security/);
+    ).rejects.toThrow(/row-level security|cannot move between clinics/);
   });
 
   it("a manager cannot grant a manager-level role", async () => {

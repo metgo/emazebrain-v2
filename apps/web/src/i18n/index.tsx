@@ -15,7 +15,7 @@ export type Locale = (typeof locales)[number];
 export type Theme = "light" | "dark" | "system";
 export type Motion = "system" | "reduce";
 
-const catalogs: Record<Locale, Record<MessageId, string>> = { en, he };
+export const catalogs: Record<Locale, Record<MessageId, string>> = { en, he };
 const rtl = new Set<Locale>(["he"]);
 
 export const isRtl = (l: Locale) => rtl.has(l);

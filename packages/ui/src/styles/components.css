@@ -896,3 +896,118 @@
   background: var(--border-decorative);
   border: 0;
 }
+
+/* ------------------------------------------------------------ Text area, checkbox */
+.emb-textarea {
+  min-block-size: 88px;
+  padding-block: 10px;
+  resize: vertical;
+  line-height: var(--leading-body);
+}
+.emb-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-block-size: var(--target-min);
+  padding-block: var(--space-2);
+}
+.emb-check input {
+  flex-shrink: 0;
+  inline-size: 22px;
+  block-size: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+}
+.emb-check__text {
+  display: grid;
+  gap: 2px;
+}
+.emb-check__label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 500;
+  cursor: pointer;
+}
+.emb-check__tag {
+  padding-inline: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
+  font-size: var(--text-12);
+  font-weight: 600;
+  line-height: 20px;
+}
+.emb-check__hint {
+  font-size: var(--text-14);
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------ Tab nav */
+.emb-tabnav {
+  margin-block-end: var(--space-6);
+  border-block-end: 1px solid var(--border-decorative);
+  overflow-x: auto;
+}
+.emb-tabnav ul {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.emb-tabnav__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target-min);
+  padding-inline: var(--space-3);
+  border-block-end: 2px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.emb-tabnav__tab:hover {
+  color: var(--text-primary);
+}
+.emb-tabnav__tab.is-active {
+  border-block-end-color: var(--brand-primary);
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------ Dialog */
+.emb-dialog {
+  inline-size: min(440px, calc(100vw - 32px));
+  padding: var(--space-6);
+  border: 1px solid var(--border-decorative);
+  border-radius: var(--radius-sheet);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--elev-3);
+}
+.emb-dialog[open] {
+  display: grid;
+  gap: var(--space-3);
+  animation: emb-pop var(--dur-enter) var(--ease-enter);
+}
+.emb-dialog::backdrop {
+  background: var(--scrim);
+}
+.emb-dialog__title {
+  font-size: var(--text-20);
+  font-weight: 600;
+}
+.emb-dialog__body {
+  color: var(--text-secondary);
+}
+.emb-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}

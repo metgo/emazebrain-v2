@@ -67,4 +67,18 @@ export function syntheticPatients(count: number, opts: { seed?: number; locale?:
   return out;
 }
 
+const PARENT_GIVEN = {
+  he: ["מירי", "רונית", "אורית", "שרון", "דנה", "יוסי", "אבי", "משה", "עידו", "גלית"],
+  en: ["Sarah", "Rachel", "Laura", "Emma", "David", "Michael", "Daniel", "Anna", "Mark", "Julia"],
+} as const;
+
+/** A synthetic parent for a synthetic child: same family name, invented first name. */
+export function syntheticGuardian(child: SyntheticPatient, seed: number): { full_name: string; relationship: "mother" | "father"; phone: string } {
+  const r = rng(seed);
+  const given = PARENT_GIVEN[child.preferred_locale][Math.floor(r() * 10)]!;
+  const digits = String(Math.floor(r() * 1e7)).padStart(7, "0");
+  // 050-0000xxx style numbers, kept in a block that real carriers don't assign to subscribers.
+  return { full_name: `${given} ${child.family_name}`, relationship: r() < 0.6 ? "mother" : "father", phone: `+972 50 000 ${digits.slice(3)}` };
+}
+
 export const SYNTHETIC_EMAIL_DOMAIN = "synthetic.test";

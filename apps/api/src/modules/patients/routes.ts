@@ -1,32 +1,92 @@
 /**
- * First vertical slice (design doc §5.3): list and view patients.
- * Everything runs under RLS; every read is written to the audit log (§6).
- * Responses carry only what the patient list needs.
+ * Patients, guardians and consent (design doc §5.3, §6, §11.3).
+ * Everything runs under RLS through withUser(); the database decides who may
+ * see or change what, and every read of a patient is written to the audit log.
  */
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type pg from "pg";
+import {
+  CONSENT_POLICY_VERSION,
+  CONSENT_PURPOSES,
+  createPatient,
+  guardianFields,
+  recordConsent,
+  updatePatient,
+  type PatientDetail,
+} from "../../../../../packages/contracts/src/index.ts";
 import { withUser, type Env } from "../../context.ts";
+import { uuidv7 } from "../../ids.ts";
+import { parseBody } from "../../validate.ts";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MANAGERS = `ARRAY['clinic_manager','org_admin']::app.member_role[]`;
+
+const notFound = (c: Context) => c.json({ error: "not_found" }, 404);
+
+/** Loads everything the patient page shows. Returns null when the user can't see the patient. */
+export async function loadPatient(db: pg.PoolClient, id: string): Promise<PatientDetail | null> {
+  const { rows } = await db.query(
+    `SELECT id, clinic_id, given_name, family_name, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
+            preferred_locale, status, sex, handedness, alert, colour_vision_deficiency,
+            deleted_at IS NOT NULL AS archived, app.patient_can_play(id) AS can_play
+       FROM app.patient WHERE id = $1`,
+    [id],
+  );
+  const p = rows[0];
+  if (!p) return null;
+  const [team, guardians, consents] = await Promise.all([
+    db.query(
+      `SELECT t.user_id, u.full_name, t.role
+         FROM app.patient_care_team t LEFT JOIN app.app_user u ON u.id = t.user_id
+        WHERE t.patient_id = $1 AND t.ended_at IS NULL
+        ORDER BY t.role, u.full_name`,
+      [id],
+    ),
+    db.query(
+      `SELECT g.id, g.full_name, gp.relationship, gp.is_legal_guardian, g.email, g.phone, g.preferred_locale
+         FROM app.guardian_patient gp JOIN app.guardian g ON g.id = gp.guardian_id
+        WHERE gp.patient_id = $1 AND g.deleted_at IS NULL
+        ORDER BY gp.created_at`,
+      [id],
+    ),
+    db.query(
+      `SELECT c.purpose, c.decision, c.signed_at, c.signer_name, g.full_name AS guardian_name, u.full_name AS captured_by_name
+         FROM app.consent_current c
+         LEFT JOIN app.guardian g ON g.id = c.guardian_id
+         LEFT JOIN app.app_user u ON u.id = c.captured_by
+        WHERE c.patient_id = $1`,
+      [id],
+    ),
+  ]);
+  return {
+    ...p,
+    care_team: team.rows.map((r) => ({ ...r, full_name: r.full_name ?? "" })),
+    guardians: guardians.rows,
+    consents: consents.rows.map((r) => ({ ...r, signed_at: (r.signed_at as Date).toISOString() })),
+  };
+}
 
 export function patientRoutes(pool: pg.Pool) {
   const r = new Hono<Env>();
+  const run = <T>(c: Context<Env>, fn: (db: pg.PoolClient) => Promise<T>) => withUser(pool, c.get("user").id, c.get("requestId"), fn);
 
   // ?clinic=<id> narrows the list to the clinic the user is working in
   // (design doc §4.2). It is a filter only: RLS still decides what is visible,
   // so naming a clinic the user doesn't belong to returns an empty list.
+  // ?archived=1 lists archived patients (only managers can see any).
   r.get("/", async (c) => {
-    const user = c.get("user");
     const clinic = c.req.query("clinic");
     if (clinic !== undefined && !UUID.test(clinic)) return c.json({ error: "invalid_clinic" }, 400);
-    const patients = await withUser(pool, user.id, c.get("requestId"), async (db) => {
+    const archived = c.req.query("archived") === "1";
+    const patients = await run(c, async (db) => {
       const { rows } = await db.query(
-        `SELECT p.id, p.clinic_id, p.given_name, p.family_name, to_char(p.date_of_birth, 'YYYY-MM-DD') AS date_of_birth, p.status
+        `SELECT p.id, p.clinic_id, p.given_name, p.family_name, to_char(p.date_of_birth, 'YYYY-MM-DD') AS date_of_birth,
+                p.status, p.alert IS NOT NULL AND p.alert <> '' AS has_alert, p.deleted_at IS NOT NULL AS archived
            FROM app.patient p
-          WHERE p.deleted_at IS NULL AND ($1::uuid IS NULL OR p.clinic_id = $1::uuid)
+          WHERE (p.deleted_at IS NOT NULL) = $2 AND ($1::uuid IS NULL OR p.clinic_id = $1::uuid)
           ORDER BY p.family_name, p.given_name
-          LIMIT 500`,
-        [clinic ?? null],
+          LIMIT 1000`,
+        [clinic ?? null, archived],
       );
       // The clinic is recorded only if the user belongs to it, so a made-up id can't write into another clinic's log.
       await db.query(
@@ -39,22 +99,196 @@ export function patientRoutes(pool: pg.Pool) {
     return c.json({ patients });
   });
 
+  r.post("/", async (c) => {
+    const body = await parseBody(c, createPatient);
+    if (!body.ok) return body.response;
+    const input = body.data;
+    const me = c.get("user").id;
+    const result = await run(c, async (db) => {
+      const { rows: roles } = await db.query<{ staff: boolean; manager: boolean }>(
+        `SELECT app.has_clinic_role($1, ARRAY['clinic_manager','org_admin','therapist']::app.member_role[]) AS staff,
+                app.has_clinic_role($1, ${MANAGERS}) AS manager`,
+        [input.clinic_id],
+      );
+      if (!roles[0]?.staff) return { error: "forbidden" as const };
+      const therapist = input.therapist_id ?? me;
+      if (therapist !== me && !roles[0].manager) return { error: "forbidden" as const };
+      if (!input.allow_duplicate) {
+        const dup = await db.query<{ d: boolean }>(`SELECT app.patient_duplicate_exists($1,$2,$3,$4) AS d`, [
+          input.clinic_id, input.given_name, input.family_name, input.date_of_birth,
+        ]);
+        if (dup.rows[0]?.d) return { error: "possible_duplicate" as const };
+      }
+      const id = uuidv7();
+      // No RETURNING: the creator can't see the row until the care team exists.
+      await db.query(
+        `INSERT INTO app.patient (id, clinic_id, given_name, family_name, date_of_birth, preferred_locale, sex, handedness, alert, colour_vision_deficiency, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [id, input.clinic_id, input.given_name, input.family_name, input.date_of_birth, input.preferred_locale,
+         input.sex ?? null, input.handedness ?? null, input.alert || null, input.colour_vision_deficiency ?? false, me],
+      );
+      await db.query(`INSERT INTO app.patient_care_team (patient_id, user_id, role) VALUES ($1,$2,'primary')`, [id, therapist]);
+      return { id };
+    });
+    if ("error" in result) return c.json({ error: result.error }, result.error === "forbidden" ? 403 : 409);
+    return c.json(result, 201);
+  });
+
   r.get("/:id", async (c) => {
     const id = c.req.param("id");
-    if (!UUID.test(id)) return c.json({ error: "not_found" }, 404);
-    const user = c.get("user");
-    const patient = await withUser(pool, user.id, c.get("requestId"), async (db) => {
-      const { rows } = await db.query(
-        `SELECT id, clinic_id, given_name, family_name, to_char(date_of_birth, 'YYYY-MM-DD') AS date_of_birth, status, preferred_locale
-           FROM app.patient WHERE id = $1 AND deleted_at IS NULL`,
-        [id],
-      );
-      if (rows[0]) await db.query(`SELECT app.record_audit('view', 'patient', $1, $1)`, [id]);
-      return rows[0] ?? null;
+    if (!UUID.test(id)) return notFound(c);
+    const patient = await run(c, async (db) => {
+      const p = await loadPatient(db, id);
+      if (p) await db.query(`SELECT app.record_audit('view', 'patient', $1, $1)`, [id]);
+      return p;
     });
     // Same answer for "doesn't exist" and "not yours", so ids can't be probed.
-    if (!patient) return c.json({ error: "not_found" }, 404);
-    return c.json({ patient });
+    return patient ? c.json({ patient }) : notFound(c);
+  });
+
+  r.patch("/:id", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID.test(id)) return notFound(c);
+    const body = await parseBody(c, updatePatient);
+    if (!body.ok) return body.response;
+    const patch: Record<string, unknown> = { ...body.data };
+    const patient = await run(c, async (db) => {
+      if (patch.status === "active") {
+        // "Active" only sticks with consent for clinic sessions; otherwise it waits for consent.
+        const { rows } = await db.query(`SELECT EXISTS (SELECT 1 FROM app.consent_current WHERE patient_id = $1 AND purpose = 'treatment' AND decision = 'granted') AS ok`, [id]);
+        patch.status = rows[0]?.ok ? "active" : "pending_consent";
+      }
+      if ("alert" in patch && !patch.alert) patch.alert = null;
+      const cols = Object.keys(patch);
+      if (cols.length) {
+        const sets = cols.map((k, i) => `${k} = $${i + 2}`).join(", ");
+        const res = await db.query(`UPDATE app.patient SET ${sets} WHERE id = $1 AND deleted_at IS NULL`, [id, ...cols.map((k) => patch[k])]);
+        if (res.rowCount === 0) return null;
+      }
+      return loadPatient(db, id);
+    });
+    return patient ? c.json({ patient }) : notFound(c);
+  });
+
+  // Archive / restore: clinic managers only (enforced by a database trigger).
+  for (const [path, archived] of [["/:id/archive", true], ["/:id/restore", false]] as const) {
+    r.post(path, async (c) => {
+      const id = c.req.param("id");
+      if (!UUID.test(id)) return notFound(c);
+      const ok = await run(c, async (db) => {
+        const res = await db.query(
+          `UPDATE app.patient SET deleted_at = ${archived ? "now()" : "NULL"} WHERE id = $1 AND (deleted_at IS NULL) = $2`,
+          [id, archived],
+        );
+        return res.rowCount === 1;
+      });
+      return ok ? c.json({ ok: true }) : notFound(c);
+    });
+  }
+
+  // ---- Guardians
+
+  r.post("/:id/guardians", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID.test(id)) return notFound(c);
+    const body = await parseBody(c, guardianFields);
+    if (!body.ok) return body.response;
+    const g = body.data;
+    const guardianId = await run(c, async (db) => {
+      const { rows } = await db.query(`SELECT clinic_id FROM app.patient WHERE id = $1 AND deleted_at IS NULL`, [id]);
+      if (!rows[0]) return null;
+      const gid = uuidv7();
+      await db.query(
+        `INSERT INTO app.guardian (id, clinic_id, full_name, email, phone, preferred_locale, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [gid, rows[0].clinic_id, g.full_name, g.email || null, g.phone || null, g.preferred_locale, c.get("user").id],
+      );
+      await db.query(
+        `INSERT INTO app.guardian_patient (guardian_id, patient_id, relationship, is_legal_guardian) VALUES ($1,$2,$3,$4)`,
+        [gid, id, g.relationship, g.is_legal_guardian],
+      );
+      return gid;
+    });
+    return guardianId ? c.json({ id: guardianId }, 201) : notFound(c);
+  });
+
+  r.patch("/:id/guardians/:gid", async (c) => {
+    const { id, gid } = c.req.param();
+    if (!UUID.test(id) || !UUID.test(gid)) return notFound(c);
+    const body = await parseBody(c, guardianFields);
+    if (!body.ok) return body.response;
+    const g = body.data;
+    const ok = await run(c, async (db) => {
+      const link = await db.query(
+        `UPDATE app.guardian_patient SET relationship = $3, is_legal_guardian = $4 WHERE guardian_id = $1 AND patient_id = $2`,
+        [gid, id, g.relationship, g.is_legal_guardian],
+      );
+      if (link.rowCount === 0) return false;
+      await db.query(`UPDATE app.guardian SET full_name = $2, email = $3, phone = $4, preferred_locale = $5 WHERE id = $1`, [
+        gid, g.full_name, g.email || null, g.phone || null, g.preferred_locale,
+      ]);
+      return true;
+    });
+    return ok ? c.json({ ok: true }) : notFound(c);
+  });
+
+  r.delete("/:id/guardians/:gid", async (c) => {
+    const { id, gid } = c.req.param();
+    if (!UUID.test(id) || !UUID.test(gid)) return notFound(c);
+    const ok = await run(c, async (db) => (await db.query(`DELETE FROM app.guardian_patient WHERE guardian_id = $1 AND patient_id = $2`, [gid, id])).rowCount === 1);
+    return ok ? c.json({ ok: true }) : notFound(c);
+  });
+
+  // ---- Consent (append-only; the latest row per purpose is current)
+
+  r.get("/:id/consents", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID.test(id)) return notFound(c);
+    const history = await run(c, async (db) => {
+      const seen = await db.query(`SELECT 1 FROM app.patient WHERE id = $1`, [id]);
+      if (!seen.rowCount) return null;
+      const { rows } = await db.query(
+        `SELECT c.id, c.purpose, c.decision, c.signed_at, c.signer_name, c.locale, c.method, c.policy_version,
+                g.full_name AS guardian_name, u.full_name AS captured_by_name
+           FROM app.consent c
+           LEFT JOIN app.guardian g ON g.id = c.guardian_id
+           LEFT JOIN app.app_user u ON u.id = c.captured_by
+          WHERE c.patient_id = $1 ORDER BY c.signed_at DESC, c.id DESC`,
+        [id],
+      );
+      return rows;
+    });
+    return history ? c.json({ consents: history }) : notFound(c);
+  });
+
+  r.post("/:id/consents", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID.test(id)) return notFound(c);
+    const body = await parseBody(c, recordConsent);
+    if (!body.ok) return body.response;
+    const input = body.data;
+    const result = await run(c, async (db) => {
+      const link = await db.query(
+        `SELECT gp.is_legal_guardian FROM app.guardian_patient gp JOIN app.patient p ON p.id = gp.patient_id
+          WHERE gp.patient_id = $1 AND gp.guardian_id = $2 AND p.deleted_at IS NULL`,
+        [id, input.guardian_id],
+      );
+      if (!link.rows[0]) return "not_found" as const;
+      if (!link.rows[0].is_legal_guardian) return "not_legal_guardian" as const;
+      for (const purpose of CONSENT_PURPOSES) {
+        const decision = input.decisions[purpose];
+        if (!decision) continue;
+        await db.query(
+          `INSERT INTO app.consent (patient_id, guardian_id, purpose, decision, policy_version, method, locale, signer_name, captured_by, record_hash)
+           VALUES ($1,$2,$3,$4,$5,'in_clinic_esign',$6,$7,app.current_user_id(),'\\x')`,
+          [id, input.guardian_id, purpose, decision, CONSENT_POLICY_VERSION, input.locale, input.signer_name],
+        );
+      }
+      return loadPatient(db, id);
+    });
+    if (result === "not_found" || result === null) return notFound(c);
+    if (result === "not_legal_guardian") return c.json({ error: "not_legal_guardian" }, 422);
+    return c.json({ patient: result }, 201);
   });
 
   return r;

@@ -10,6 +10,8 @@ interface ClinicCtx {
   clinics: Array<{ id: string; name: string; roles: Membership["role"][] }>;
   clinicId: string | null;
   setClinicId: (id: string) => void;
+  /** The user manages the clinic they are working in (clinic manager or org admin). */
+  isManager: boolean;
 }
 
 const Ctx = createContext<ClinicCtx | null>(null);
@@ -35,10 +37,13 @@ export function ClinicProvider({ memberships, children }: { memberships: Members
   });
   const clinicId = clinics.find((c) => c.id === chosen)?.id ?? clinics[0]?.id ?? null;
 
+  const roles = clinics.find((c) => c.id === clinicId)?.roles ?? [];
+  const isManager = roles.includes("clinic_manager") || roles.includes("org_admin") || memberships.some((m) => m.clinic_id === null && m.role === "org_admin");
   const value = useMemo<ClinicCtx>(
     () => ({
       clinics,
       clinicId,
+      isManager,
       setClinicId: (id) => {
         try {
           localStorage.setItem("emb.clinic", id);
@@ -48,7 +53,7 @@ export function ClinicProvider({ memberships, children }: { memberships: Members
         setChosen(id);
       },
     }),
-    [clinics, clinicId],
+    [clinics, clinicId, isManager],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

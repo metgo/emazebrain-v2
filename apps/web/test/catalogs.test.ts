@@ -41,9 +41,22 @@ describe("message catalogs", () => {
   }
 
   it("never calls games an assessment, treatment or diagnosis (invariant 9)", () => {
-    const banned = /\b(assessment|treatment|diagnos\w*)\b|אבחון|אבחנה/i;
+    // Only the words people read count; select keys like "treatment" are codes.
+    const literal = (els: MessageFormatElement[]): string =>
+      els
+        .map((el) =>
+          el.type === TYPE.literal ? el.value
+          : el.type === TYPE.select || el.type === TYPE.plural ? Object.values(el.options).map((o) => literal(o.value)).join(" ")
+          : el.type === TYPE.tag ? literal(el.children)
+          : "",
+        )
+        .join(" ");
+    const banned = /\b(assessment|treatment|diagnos\w*)\b|אבחון|אבחנה|טיפול/i;
     for (const [locale, cat] of Object.entries(catalogs)) {
-      for (const [key, msg] of Object.entries(cat)) expect(banned.test(msg), `${locale}:${key}: ${msg}`).toBe(false);
+      for (const [key, msg] of Object.entries(cat)) {
+        const text = literal(parse(msg));
+        expect(banned.test(text), `${locale}:${key}: ${text}`).toBe(false);
+      }
     }
   });
 });
