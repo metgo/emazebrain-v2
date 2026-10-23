@@ -34,7 +34,7 @@ export async function apiGet<T>(path: string, init: { signal?: AbortSignal } = {
 }
 
 /** POST / PATCH / DELETE with a JSON body. Same errors as apiGet, plus field issues on 400. */
-export async function apiSend<T>(method: "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
+export async function apiSend<T>(method: "POST" | "PATCH" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {

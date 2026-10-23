@@ -5,6 +5,7 @@ import { requireStaffSession, type Env } from "./context.ts";
 import { meRoutes } from "./modules/me/routes.ts";
 import { patientRoutes } from "./modules/patients/routes.ts";
 import { clinicRoutes } from "./modules/clinics/routes.ts";
+import { protocolRoutes } from "./modules/protocols/routes.ts";
 
 export interface AppInfo {
   cell: string;
@@ -45,6 +46,7 @@ export function createApp(info: AppInfo, deps?: AppDeps) {
     v1.route("/me", meRoutes(deps.pool));
     v1.route("/patients", patientRoutes(deps.pool));
     v1.route("/clinics", clinicRoutes(deps.pool));
+    v1.route("/", protocolRoutes(deps.pool));
     app.route("/v1", v1);
   }
 

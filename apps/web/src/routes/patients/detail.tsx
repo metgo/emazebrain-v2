@@ -30,6 +30,7 @@ import { calendarDate } from "../../lib/format.ts";
 import { useTitle } from "../../lib/title.ts";
 import { fullName, LoadError, StatusChip, useAge } from "../shared.tsx";
 import { issuesToErrors } from "./form.tsx";
+import { ProtocolCard } from "./protocol-card.tsx";
 
 type Ctx = { patient: PatientDetail };
 export const usePatientCtx = () => useOutletContext<Ctx>();
@@ -55,17 +56,19 @@ export function PatientLayout() {
   const { isManager } = useClinic();
   const archive = useArchivePatient(id);
   const [confirmArchive, setConfirmArchive] = useState(false);
-  const [flash, setFlash] = useState<MessageId | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
   const p = patient.data;
   useTitle(p ? fullName(p) : t("patients.title"));
 
   // One-time message handed over by the page we came from ("Patient added").
   useEffect(() => {
-    const f = (location.state as { flash?: string } | null)?.flash;
-    if (f === "created") setFlash("patient.created");
-    else if (f === "saved") setFlash("patient.saved");
-    if (f) navigate(location.pathname, { replace: true, state: null });
-  }, [location.state, location.pathname, navigate]);
+    const st = location.state as { flash?: string; flashText?: string } | null;
+    const f = st?.flash;
+    if (f === "created") setFlash(t("patient.created"));
+    else if (f === "saved") setFlash(t("patient.saved"));
+    else if (st?.flashText) setFlash(st.flashText);
+    if (st) navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate, t]);
 
   if (patient.isPending) return <MazeLoader label={t("common.loading")} />;
   if (patient.isError) {
@@ -99,7 +102,7 @@ export function PatientLayout() {
       <BackLink />
       {flash && (
         <div className="app-flash">
-          <Alert tone="success">{t(flash)}</Alert>
+          <Alert tone="success">{flash}</Alert>
         </div>
       )}
       <header className="phead">
@@ -235,11 +238,7 @@ export function PatientOverview() {
         </dl>
       </Card>
       <div className="pstack">
-        <Card as="section">
-          <EmptyState icon={<RouteIcon size={28} aria-hidden="true" />} title={t("patient.protocol.title")}>
-            {t("patient.protocol.body")}
-          </EmptyState>
-        </Card>
+        <ProtocolCard patientId={p.id} archived={p.archived} />
         <Card as="section" labelledBy="p-team">
           <h2 id="p-team" className="app-cardtitle">
             {t("patient.careTeam")}

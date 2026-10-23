@@ -10,6 +10,7 @@ import type {
   UpdatePatient,
 } from "@emb/contracts";
 import { ApiError, apiGet, apiSend } from "./http.ts";
+import type { AssignInput, AssignmentView, TemplateDetail, TemplateInput, TemplateSummary, TodayItem } from "@emb/contracts";
 
 export type { PatientDetail, PatientListItem, PatientStatus, StaffMember };
 export type Role = "platform_admin" | "org_admin" | "clinic_manager" | "therapist" | "assistant";
@@ -126,5 +127,86 @@ export function useRecordConsent(patientId: string) {
   return useMutation({
     mutationFn: (body: RecordConsent) => apiSend<{ patient: PatientDetail }>("POST", `/v1/patients/${patientId}/consents`, body).then((r) => r.patient),
     onSuccess: (p) => refresh(p),
+  });
+}
+
+// ---------------------------------------------------------------- protocols (slice 3)
+export type { AssignmentView, TemplateDetail, TemplateSummary, TodayItem };
+
+export function useTemplates(clinicId: string | null) {
+  return useQuery({
+    queryKey: ["templates", clinicId],
+    queryFn: ({ signal }) => apiGet<{ templates: TemplateSummary[] }>(`/v1/templates${clinicId ? `?clinic=${clinicId}` : ""}`, { signal }).then((r) => r.templates),
+    retry,
+  });
+}
+
+export function useTemplate(id: string | null) {
+  return useQuery({
+    queryKey: ["template", id],
+    queryFn: ({ signal }) => apiGet<{ template: TemplateDetail }>(`/v1/templates/${id}`, { signal }).then((r) => r.template),
+    enabled: !!id,
+    retry,
+  });
+}
+
+export function useSaveTemplate(id?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TemplateInput) =>
+      (id ? apiSend<{ template: TemplateDetail }>("PUT", `/v1/templates/${id}`, body) : apiSend<{ template: TemplateDetail }>("POST", "/v1/templates", body)).then((r) => r.template),
+    onSuccess: (t) => {
+      void qc.invalidateQueries({ queryKey: ["templates"] });
+      qc.setQueryData(["template", t.id], t);
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiSend<{ ok: true }>("DELETE", `/v1/templates/${id}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["templates"] }),
+  });
+}
+
+export const assignmentKey = (patientId: string) => ["assignment", patientId] as const;
+
+export function useAssignment(patientId: string) {
+  return useQuery({
+    queryKey: assignmentKey(patientId),
+    queryFn: ({ signal }) => apiGet<{ assignment: AssignmentView | null }>(`/v1/patients/${patientId}/assignment`, { signal }).then((r) => r.assignment),
+    retry,
+  });
+}
+
+export function useAssign(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssignInput) => apiSend<{ assignment: AssignmentView }>("POST", `/v1/patients/${patientId}/assignment`, body).then((r) => r.assignment),
+    onSuccess: (a) => {
+      qc.setQueryData(assignmentKey(patientId), a);
+      void qc.invalidateQueries({ queryKey: ["today"] });
+    },
+  });
+}
+
+export function useUpdateAssignment(patientId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "active" | "paused" | "cancelled" }) =>
+      apiSend<{ assignment: AssignmentView | null }>("PATCH", `/v1/assignments/${id}`, { status }).then((r) => r.assignment),
+    onSuccess: (a) => {
+      qc.setQueryData(assignmentKey(patientId), a);
+      void qc.invalidateQueries({ queryKey: ["today"] });
+    },
+  });
+}
+
+export function useToday(clinicId: string | null) {
+  return useQuery({
+    queryKey: ["today", clinicId],
+    queryFn: ({ signal }) => apiGet<{ items: TodayItem[] }>(`/v1/today${clinicId ? `?clinic=${clinicId}` : ""}`, { signal }).then((r) => r.items),
+    retry,
   });
 }

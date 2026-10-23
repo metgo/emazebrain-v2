@@ -23,7 +23,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Alert, Avatar, Button, Card, Chip, DataList, EmptyState, MazeLoader, PageHeader, Segmented, type ChipTone, type Column } from "@emb/ui";
-import { useMe, usePatients } from "../api/queries.ts";
+import { useMe, usePatients, useToday } from "../api/queries.ts";
+import { findGame, localText } from "../games/registry.ts";
 import { fullName, LoadError, StatusChip, useAge } from "./shared.tsx";
 import { useT, usePrefs, locales, type Locale, type MessageId, type Motion, type Theme } from "../i18n/index.tsx";
 import { useClinic } from "../lib/clinic.tsx";
@@ -56,9 +57,7 @@ export function TodayPage() {
           <h2 id="next-up" className="app-cardtitle">
             {t("today.nextUp.title")}
           </h2>
-          <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title={t("today.nextUp.empty")}>
-            {t("today.nextUp.emptyBody")}
-          </EmptyState>
+          <NextUp />
         </Card>
         <Card as="section" className="today-attention" labelledBy="attention">
           <h2 id="attention" className="app-cardtitle">
@@ -106,6 +105,51 @@ export function TodayPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Today's sessions (and any missed in the last week), one per patient (design doc §4.1, journey T1). */
+function NextUp() {
+  const t = useT();
+  const intl = useIntl();
+  const { locale } = usePrefs();
+  const { clinicId } = useClinic();
+  const today = useToday(clinicId);
+  const age = useAge();
+  const todayIso = new Date().toLocaleDateString("en-CA");
+  if (today.isPending) return <MazeLoader label={t("common.loading")} />;
+  if (today.isError) return <LoadError error={today.error} retry={() => void today.refetch()} />;
+  if (today.data.length === 0) {
+    return (
+      <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title={t("today.nextUp.empty")}>
+        {t("today.nextUp.emptyBody")}
+      </EmptyState>
+    );
+  }
+  return (
+    <ul className="nextup">
+      {today.data.map((it) => {
+        const games = [...new Set(it.games)].map((g) => (findGame(g) ? localText(findGame(g)!.manifest.name, locale) : g));
+        return (
+          <li key={it.planned_session_id} className="nextup__item">
+            <Avatar name={fullName(it.patient)} size={44} />
+            <div className="nextup__text">
+              <Link to={`/patients/${it.patient.id}`} className="nextup__name">
+                <bdi>{fullName(it.patient)}</bdi>
+              </Link>
+              <p className="app-muted">
+                {age(it.patient.date_of_birth)} · {t("today.session", { week: it.week, seq: it.seq, total: it.total })}
+              </p>
+              <p className="nextup__games">{games.join(" → ")}</p>
+              {it.planned_date < todayIso && (
+                <p className="nextup__late">{t("today.planned", { date: intl.formatDate(calendarDate(it.planned_date), { weekday: "long", day: "numeric", month: "short" }) })}</p>
+              )}
+              {!it.patient.can_play && <Chip tone="warning">{t("patient.pending.title")}</Chip>}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

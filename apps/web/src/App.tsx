@@ -15,6 +15,7 @@ import { PatientFamily, PatientLayout, PatientOverview } from "./routes/patients
 import { ConsentPage } from "./routes/patients/consent.tsx";
 import { TeamPage } from "./routes/team.tsx";
 import { GamePage, GamePreviewPage, LibraryPage } from "./routes/library.tsx";
+import { AssignPage, ProtocolsPage, TemplateBuilderPage } from "./routes/protocols/pages.tsx";
 import { useIdleTimeout } from "./lib/idle.ts";
 import { useSignOut } from "./shell/ClinicShell.tsx";
 import { ClinicShell } from "./shell/ClinicShell.tsx";
@@ -89,7 +90,10 @@ export const routes: RouteObject[] = [
       },
       { path: "/team", element: <TeamPage /> },
       { path: "/calendar", element: <ComingSoonPage area="calendar" /> },
-      { path: "/protocols", element: <ComingSoonPage area="protocols" /> },
+      { path: "/protocols", element: <ProtocolsPage /> },
+      { path: "/protocols/new", element: <TemplateBuilderPage /> },
+      { path: "/protocols/:id/edit", element: <TemplateBuilderPage /> },
+      { path: "/patients/:id/assign", element: <AssignPage /> },
       { path: "/library", element: <LibraryPage /> },
       { path: "/library/:gameId", element: <GamePage /> },
       { path: "/messages", element: <ComingSoonPage area="messages" /> },

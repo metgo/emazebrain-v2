@@ -12,7 +12,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
+  // No retries: journeys sign up real users once, so a retry would hide the first failure.
+  retries: 0,
   // On CI the "github" reporter turns failures into annotations we can read without downloading artifacts.
   reporter: process.env.CI ? [["github"], ["list"], ["html", { open: "never" }]] : "list",
   use: {
