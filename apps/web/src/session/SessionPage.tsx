@@ -110,6 +110,7 @@ function Runner({ pkg }: { pkg: LaunchPackage }) {
         setPlayed((p) => p.map((x) => (x.envelope.session_id === envelope.session_id ? { ...x, send: r } : x)));
         void qc.invalidateQueries({ queryKey: assignmentKey(pkg.patient.id) });
         void qc.invalidateQueries({ queryKey: sessionsKey(pkg.patient.id) });
+        void qc.invalidateQueries({ queryKey: ["progression", pkg.patient.id] });
         void qc.invalidateQueries({ queryKey: ["today"] });
       });
     },

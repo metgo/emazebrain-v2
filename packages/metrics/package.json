@@ -1,0 +1,16 @@
+{
+  "name": "@emb/metrics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Progress maths (design doc §5.9): baselines per game and difficulty, scores vs baseline, skill trends and plain-language summaries. Pure: no clock, no I/O.",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

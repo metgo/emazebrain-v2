@@ -12,6 +12,7 @@ import { LoadError } from "./routes/shared.tsx";
 import { PatientsPage } from "./routes/patients/list.tsx";
 import { EditPatientPage, NewPatientPage } from "./routes/patients/form.tsx";
 import { PatientFamily, PatientLayout, PatientOverview } from "./routes/patients/detail.tsx";
+import { PatientProgress } from "./routes/patients/progress.tsx";
 import { ConsentPage } from "./routes/patients/consent.tsx";
 import { TeamPage } from "./routes/team.tsx";
 import { GamePage, GamePreviewPage, LibraryPage } from "./routes/library.tsx";
@@ -104,6 +105,7 @@ export const routes: RouteObject[] = [
         element: <PatientLayout />,
         children: [
           { index: true, element: <PatientOverview /> },
+          { path: "progress", element: <PatientProgress /> },
           { path: "family", element: <PatientFamily /> },
         ],
       },

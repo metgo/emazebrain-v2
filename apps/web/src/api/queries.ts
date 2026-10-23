@@ -10,7 +10,7 @@ import type {
   UpdatePatient,
 } from "@emb/contracts";
 import { ApiError, apiGet, apiSend } from "./http.ts";
-import type { AssignInput, AssignmentView, GameSessionView, LaunchPackage, TemplateDetail, TemplateInput, TemplateSummary, TodayItem } from "@emb/contracts";
+import type { AssignInput, AssignmentView, GameSessionView, LaunchPackage, ProgressionDecisionView, TemplateDetail, TemplateInput, TemplateSummary, TodayItem } from "@emb/contracts";
 
 export type { PatientDetail, PatientListItem, PatientStatus, StaffMember };
 export type Role = "platform_admin" | "org_admin" | "clinic_manager" | "therapist" | "assistant";
@@ -225,6 +225,14 @@ export function usePatientSessions(patientId: string) {
   return useQuery({
     queryKey: sessionsKey(patientId),
     queryFn: ({ signal }) => apiGet<{ sessions: GameSessionView[] }>(`/v1/patients/${patientId}/sessions`, { signal }).then((r) => r.sessions),
+    retry,
+  });
+}
+
+export function useProgression(patientId: string) {
+  return useQuery({
+    queryKey: ["progression", patientId],
+    queryFn: ({ signal }) => apiGet<{ decisions: ProgressionDecisionView[] }>(`/v1/patients/${patientId}/progression`, { signal }).then((r) => r.decisions),
     retry,
   });
 }

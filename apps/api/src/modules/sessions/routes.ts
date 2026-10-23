@@ -15,6 +15,7 @@ import {
   resultUpload,
   type GameSessionView,
   type LaunchPackage,
+  type ProgressionDecisionView,
   type ResultEnvelopeInput,
   type ResultReceipt,
 } from "../../../../../packages/contracts/src/index.ts";
@@ -195,6 +196,27 @@ export function sessionRoutes(pool: pg.Pool, tickets: TicketSigner) {
       return rows;
     });
     return sessions ? c.json({ sessions }) : c.json({ error: "not_found" }, 404);
+  });
+
+  // Why difficulty changed (§5.5): one row per automatic decision that moved it.
+  // "Hold" decisions are left out; they would bury the few that matter.
+  r.get("/patients/:id/progression", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID.test(id)) return c.json({ error: "not_found" }, 404);
+    const decisions = await run(c, async (db) => {
+      const seen = await db.query(`SELECT 1 FROM app.patient WHERE id = $1`, [id]);
+      if (!seen.rowCount) return null;
+      const { rows } = await db.query<ProgressionDecisionView>(
+        `SELECT d.id, d.game_session_id, g.game_id, d.decided_at, d.action, d.from_difficulty, d.to_difficulty, d.reason
+           FROM app.progression_decision d JOIN app.game_session g ON g.id = d.game_session_id
+          WHERE d.patient_id = $1 AND d.action <> 'hold'
+          ORDER BY d.decided_at DESC LIMIT 200`,
+        [id],
+      );
+      await db.query(`SELECT app.record_audit('view', 'progression_decision', NULL, $1)`, [id]);
+      return rows;
+    });
+    return decisions ? c.json({ decisions }) : c.json({ error: "not_found" }, 404);
   });
 
   return r;

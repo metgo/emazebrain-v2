@@ -1347,3 +1347,199 @@ a.gamecard:hover {
   margin-block-start: var(--space-3);
   font-weight: 600;
 }
+
+/* ------------------------------------------------------------ Progress (slice 5) */
+.progress {
+  display: grid;
+  gap: var(--space-4);
+}
+.progress-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+.progress-tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--border-decorative);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+}
+.progress-tile dt {
+  font-size: var(--text-14);
+  color: var(--text-secondary);
+}
+.progress-tile dd {
+  margin: 0;
+  font-size: var(--text-30);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-end: var(--space-4);
+}
+.progress-head__text {
+  display: grid;
+  gap: var(--space-1);
+  max-inline-size: 60ch;
+}
+.progress-head__text .app-cardtitle {
+  margin: 0;
+}
+.progress-head__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+.progress-view {
+  min-inline-size: 220px;
+}
+.progress-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-block-end: var(--space-4);
+}
+.progress-note {
+  margin-block-start: var(--space-3);
+}
+.progress-score {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.progress-history {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+.progress-history > .emb-datalist {
+  inline-size: 100%;
+}
+.decisions {
+  display: grid;
+  gap: var(--space-3);
+}
+.decision {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.decision__icon {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: var(--brand-primary-subtle);
+  color: var(--brand-primary);
+}
+.decision__text {
+  display: grid;
+  gap: 2px;
+}
+
+.trend {
+  position: relative;
+  inline-size: 100%;
+  border-radius: var(--radius-control);
+  touch-action: pan-y;
+}
+.trend:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+}
+.trend__svg {
+  display: block;
+  overflow: visible;
+}
+.trend__grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+.trend__base {
+  stroke: var(--chart-axis);
+  stroke-width: 1.5;
+}
+.trend__baselabel,
+.trend__tick {
+  fill: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.trend__lane {
+  fill: var(--chart-band);
+}
+.trend__lane--alt {
+  fill: var(--chart-band-alt);
+}
+.trend__lanetext {
+  fill: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.trend__change {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+.trend__cross {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+.trend__line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.trend__dot {
+  fill: var(--chart-1);
+  stroke: var(--bg-surface);
+  stroke-width: 2;
+  transition: r var(--dur-press) var(--ease-enter);
+}
+.trend__dot--base {
+  fill: var(--bg-surface);
+  stroke: var(--chart-1);
+}
+.trend__endlabel {
+  fill: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.trend__tip {
+  position: absolute;
+  inset-block-start: 4px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  inline-size: 220px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-decorative);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  box-shadow: var(--elev-2);
+  font-size: var(--text-14);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+.trend__tipvalue {
+  font-size: var(--text-16);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.trend__tipnote {
+  font-weight: 500;
+}

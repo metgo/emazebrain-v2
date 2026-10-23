@@ -29,6 +29,12 @@
   --status-info-subtle: #e2f2fa;
   --hemi-warm: #c2410c;
   --hemi-cold: #0b6e99;
+  /* Charts (validated with the dataviz palette checker against the card surface) */
+  --chart-1: #5b4bdb;
+  --chart-grid: #e2e5ee;
+  --chart-axis: #8b93a3;
+  --chart-band: #eef0f6;
+  --chart-band-alt: #e4e7f0;
   --scrim: rgb(17 24 39 / 0.4);
 
   /* Elevation: light mode uses shadows */
@@ -124,6 +130,11 @@
   --status-info-subtle: #0f2a38;
   --hemi-warm: #fdba74;
   --hemi-cold: #7cc8f0;
+  --chart-1: #8f80f7;
+  --chart-grid: #2a2f3a;
+  --chart-axis: #6b7385;
+  --chart-band: #1f232d;
+  --chart-band-alt: #262b36;
   --scrim: rgb(0 0 0 / 0.6);
   --elev-1: 0 0 0 1px var(--border-decorative);
   --elev-2: 0 0 0 1px var(--border-decorative), 0 8px 24px rgb(0 0 0 / 0.4);
@@ -155,6 +166,11 @@
     --status-info-subtle: #0f2a38;
     --hemi-warm: #fdba74;
     --hemi-cold: #7cc8f0;
+    --chart-1: #8f80f7;
+    --chart-grid: #2a2f3a;
+    --chart-axis: #6b7385;
+    --chart-band: #1f232d;
+    --chart-band-alt: #262b36;
     --scrim: rgb(0 0 0 / 0.6);
     --elev-1: 0 0 0 1px var(--border-decorative);
     --elev-2: 0 0 0 1px var(--border-decorative), 0 8px 24px rgb(0 0 0 / 0.4);

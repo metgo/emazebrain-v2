@@ -109,6 +109,18 @@ export interface GameSessionView {
   metrics: Record<string, unknown>;
 }
 
+/** An automatic difficulty change, for the progress chart's markers (design doc §5.5). */
+export interface ProgressionDecisionView {
+  id: string;
+  game_session_id: string;
+  game_id: string;
+  decided_at: string;
+  action: "up" | "down";
+  from_difficulty: number;
+  to_difficulty: number;
+  reason: string;
+}
+
 /** Canonical JSON (sorted keys, recursively), so the same params always hash the same. */
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value ?? null);

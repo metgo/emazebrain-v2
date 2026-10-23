@@ -112,13 +112,13 @@ test.describe("signed in", () => {
     const table = page.getByRole("table", { name: "Patients on your caseload" });
     await expect(table).toBeVisible();
 
-    // One clinic at a time: switching clinic changes the list (14 + 5 synthetic patients, plus the header row).
+    // One clinic at a time: switching clinic changes the list (15 + 5 synthetic patients, plus the header row).
     const clinic = page.getByLabel("Clinic");
     await clinic.selectOption({ label: "Haifa North Clinic" });
     await expect(table.getByRole("row")).toHaveCount(6);
     await clinic.selectOption({ label: "Tel Aviv Child Development Center" });
-    await expect(table.getByRole("row")).toHaveCount(15);
-    const rowsBefore = 15;
+    await expect(table.getByRole("row")).toHaveCount(16);
+    const rowsBefore = 16;
     const first = table.getByRole("link").first();
     const name = (await first.textContent())!.trim();
     await axe(page, "patients");

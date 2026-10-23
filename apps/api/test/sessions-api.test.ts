@@ -202,4 +202,20 @@ describe.skipIf(!ADMIN_URL)("sessions API", () => {
     expect(res.body.sessions[0]).toMatchObject({ game_id: "catch-me-if-you-can", seq: expect.any(Number) });
     expect((await dana(`/v1/patients/${patient}/sessions`)).status).toBe(404);
   });
+
+  it("lists difficulty changes (not holds) with their reason, audits the view, and hides them from others", async () => {
+    const res = await yael(`/v1/patients/${patient}/progression`);
+    expect(res.status).toBe(200);
+    // Newest first: step 1 went up in the last test; step 2 came down after two weak sessions earlier.
+    expect(res.body.decisions).toEqual([
+      expect.objectContaining({ game_id: "catch-me-if-you-can", action: "up", from_difficulty: 2, to_difficulty: 3, reason: "streak_up" }),
+      expect.objectContaining({ game_id: "catch-me-if-you-can", action: "down", from_difficulty: 2, to_difficulty: 1, reason: "streak_down" }),
+    ]);
+    const holds = await env.db.query(`SELECT count(*)::int AS n FROM app.progression_decision WHERE patient_id = $1 AND action = 'hold'`, [patient]);
+    expect(holds.rows[0].n).toBeGreaterThan(0); // they exist, but aren't listed
+    const audit = await env.db.query(`SELECT 1 FROM app.audit_event WHERE action = 'view' AND resource_type = 'progression_decision' AND patient_id = $1`, [patient]);
+    expect(audit.rowCount).toBe(1);
+    expect((await dana(`/v1/patients/${patient}/progression`)).status).toBe(404);
+    expect((await yael(`/v1/patients/not-a-uuid/progression`)).status).toBe(404);
+  });
 });

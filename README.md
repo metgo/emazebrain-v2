@@ -2,22 +2,24 @@
 
 A rebuild of eMazeBrain: a platform where pediatric therapists run multi-week protocols of game-based activities with children, in clinic and at home.
 
-**Status: Phase 0 (Foundations).** See the design document for the full plan; `CLAUDE.md` lists the rules every change must follow.
+**Status: MVP, core loop working** — patient → protocol → session → progress. See the design document for the full plan; `CLAUDE.md` lists the rules every change must follow.
 
 ## What's here
 
-| Path | What it is | State |
-| --- | --- | --- |
-| `packages/session-rules` | The one module that owns time, lives and end conditions for every game (`timed` / `lives` / `timed_lives`) | Done, 24 tests |
-| `packages/db` | Postgres migrations with row-level security per clinic, an append-only hash-chained audit log, the synthetic-data factory, and tests against a real database | Tenancy, patients, care team, consent, audit, auth schema; 19 tests |
-| `packages/ui` | Design system: §7 tokens (light and dark), Inter + Rubik, buttons, fields, alerts, data list (table on desktop, cards on tablet), app shell (rail / compact rail / bottom tabs) | 10 tests, incl. a repo-wide check for physical CSS |
-| `packages/game-sdk` | The typed contract between games and the host: manifest, parameters, lifecycle, events | Types only |
-| `apps/api` | Hono API: Better Auth login with mandatory TOTP for staff, `/v1/me`, `/v1/patients` (optional clinic filter) under RLS with read auditing; `seed:dev` for local data | 10 tests, incl. full sign-in → MFA → patients flow |
-| `apps/web` | Clinic web app (React 19 + Vite): sign-in, two-step setup and verification, Today, Patients, one patient, Settings; Hebrew and English with RTL; 15-minute idle lock | 16 unit tests + 8 end-to-end tests with axe (WCAG 2.2 AA) |
-| `games/tunnel-rush-spike` | Throwaway test: can PixiJS 8 run Tunnel Rush at 60 fps on a cheap tablet? | PASS on the founder's test tablets (2026-10-22) |
-| `spikes/powersync` | Self-hosted PowerSync vs RLS: same rows for every user? | PASS: 0 leaks, 0 gaps over 160 users; revocations < 1 s |
-| `spikes/capacitor-offline` | Sandboxed game loads its pack offline | PASS in Chromium (9/9) and in the tablet browser; installed-app run later |
-| `docs/adr` | Architecture decision records | 5 ADRs |
+| Path | What it is |
+| --- | --- |
+| `apps/web` | Clinic web app (React 19 + Vite), Hebrew and English with RTL. Sign-in with two-step codes; Today; patients, guardians and consent; protocol templates, builder and assignment; running a session in kid mode; the Progress tab; team; settings |
+| `apps/api` | Hono API under Postgres row-level security, with read auditing. Better Auth with mandatory single-use TOTP; patients, consent, protocols, signed launch tickets, idempotent result upload, progression; `seed:dev` for synthetic data |
+| `packages/db` | Migrations (RLS on every table, append-only consent and audit, hash-chained audit log) and the synthetic-data factory |
+| `packages/ui` | Design system: tokens (light and dark), components, app shell; a repo-wide check for physical CSS |
+| `packages/session-rules` | The one module that owns time, lives and end conditions for every game |
+| `packages/progression` | Rule-based difficulty changes, pure |
+| `packages/metrics` | Progress maths: baselines per game × difficulty, scores, skill trends, summaries, pure |
+| `packages/game-sdk`, `packages/game-runtime` | The game contract and the sandboxed runtime |
+| `packages/contracts` | Request and response types shared by the API and the app |
+| `games/catch-me-if-you-can` | The first game rebuilt on the SDK, with warm and cold palettes |
+| `spikes/*`, `games/tunnel-rush-spike` | Phase 0 technical tests (all passed) |
+| `docs/adr` | Architecture decision records 0001–0007 |
 
 ## Getting started
 
@@ -64,3 +66,15 @@ DATABASE_URL=postgres://postgres@localhost:5432/postgres pnpm --filter @emb/web 
 - [x] Audit log: trigger-logged writes, API-logged reads, hash chain
 - [ ] SST infrastructure for the Israel cell
 - [x] Design tokens and app shell (`packages/ui`, `apps/web`), Hebrew and English, RTL
+
+## MVP core loop (design doc §15, Phase 1)
+
+- [x] Two-step sign-in codes are single-use
+- [x] Slice 1: patients, guardians and consent; no session without consent
+- [x] Slice 2: Catch Me If You Can runs inside the app, warm and cold, with a Library preview
+- [x] Slice 3: protocol templates, builder generated from the game's manifest, assignment, Today
+- [x] Slice 4: running a session in kid mode; each result saved exactly once; progression
+- [x] Slice 5: Progress tab — trend against the child's own baseline, skill views, table view, difficulty changes, history
+- [ ] Offline sync on clinic tablets (PowerSync, already spiked)
+- [ ] Parent portal and home programs
+- [ ] The other six games

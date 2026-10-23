@@ -94,6 +94,7 @@ export function PatientLayout() {
   const base = `/patients/${p.id}`;
   const tabs = [
     { href: base, label: t("patient.tab.overview"), active: location.pathname === base },
+    { href: `${base}/progress`, label: t("patient.tab.progress"), active: location.pathname === `${base}/progress` },
     { href: `${base}/family`, label: t("patient.tab.family"), active: location.pathname === `${base}/family` },
   ];
 
