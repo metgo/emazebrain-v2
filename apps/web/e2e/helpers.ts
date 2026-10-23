@@ -6,6 +6,17 @@ export const PASSWORD = "correct horse battery staple";
 export const SHOTS = "test-results/screens";
 
 export async function axe(page: Page, label: string) {
+  // Scan the settled page, not a frame halfway through a fade-in (dialogs, menus):
+  // a partly transparent button reads as low contrast.
+  // Looping animations (spinners) never finish, so only wait for finite ones.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   const { violations } = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   const summary = violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`);
   expect(summary, `axe on ${label}`).toEqual([]);
