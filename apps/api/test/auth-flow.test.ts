@@ -3,7 +3,7 @@
  * TOTP → sign in again with password + code → read patients under RLS, with
  * every read written to the audit log.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import pg from "pg";
 import { createHmac, randomUUID } from "node:crypto";
 import { migrate } from "../../../packages/db/src/migrate.ts";
@@ -69,7 +69,14 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
   let secret = "";
   const ids = { org: uuidv7(), clinic: uuidv7(), mine: uuidv7(), notMine: uuidv7() };
 
+  // Codes are single-use, so each sign-in moves the clock to the next 30-second step.
+  const freshCode = () => {
+    vi.setSystemTime(Date.now() + 30_000);
+    return totp(secret);
+  };
+
   beforeAll(async () => {
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
     const admin = new pg.Client({ connectionString: ADMIN_URL });
     await admin.connect();
     await admin.query(`CREATE DATABASE ${dbName}`);
@@ -90,6 +97,7 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
   });
 
   afterAll(async () => {
+    vi.useRealTimers();
     await pool?.end();
     await authDb?.end();
     await super_?.end();
@@ -135,7 +143,7 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
     expect(enable.status).toBe(200);
     expect(enable.body.backupCodes.length).toBeGreaterThan(0);
     secret = new URL(enable.body.totpURI).searchParams.get("secret")!;
-    expect((await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: totp(secret) } })).status).toBe(200);
+    expect((await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: freshCode() } })).status).toBe(200);
     await api("/api/auth/sign-out", { method: "POST", body: {} });
 
     const next = client(app);
@@ -145,7 +153,7 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
 
     const wrong = await next("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: "000000" } });
     expect(wrong.status).not.toBe(200);
-    const ok = await next("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: totp(secret) } });
+    const ok = await next("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: freshCode() } });
     expect(ok.status).toBe(200);
 
     const me = await next("/v1/me");
@@ -156,7 +164,7 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
   it("lists only care-team patients, hides others as not found, and audits every read", async () => {
     const api = client(app);
     await api("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
-    await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: totp(secret) } });
+    await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: freshCode() } });
 
     const list = await api("/v1/patients");
     expect(list.status).toBe(200);
@@ -186,7 +194,7 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
 
     const api = client(app);
     await api("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
-    await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: totp(secret) } });
+    await api("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: freshCode() } });
 
     const mine = await api(`/v1/patients?clinic=${ids.clinic}`);
     expect(mine.body.patients.map((p: { id: string }) => p.id)).toEqual([ids.mine]);
@@ -200,6 +208,21 @@ describe.skipIf(!ADMIN_URL)("sign-in with MFA, then patients under RLS", () => {
     );
     // Newest first: the unknown clinic is not written into its log; the user's own clinic is.
     expect(rows).toEqual([{ clinic_id: null }, { clinic_id: ids.clinic }]);
+  });
+
+  it("refuses a code that was already used, even in a new sign-in", async () => {
+    const code = freshCode();
+    const first = client(app);
+    await first("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
+    expect((await first("/api/auth/two-factor/verify-totp", { method: "POST", body: { code } })).status).toBe(200);
+
+    const replay = client(app);
+    await replay("/api/auth/sign-in/email", { method: "POST", body: { email, password } });
+    const again = await replay("/api/auth/two-factor/verify-totp", { method: "POST", body: { code } });
+    expect(again.status).toBe(401);
+    expect((await replay("/v1/me")).status).toBe(401);
+    // The next code still works.
+    expect((await replay("/api/auth/two-factor/verify-totp", { method: "POST", body: { code: freshCode() } })).status).toBe(200);
   });
 
   it("rate-limits repeated two-factor guesses", async () => {

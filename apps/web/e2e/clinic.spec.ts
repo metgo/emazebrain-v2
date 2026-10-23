@@ -27,11 +27,18 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png` });
 }
 
-/** A code from the next 30-second window if the current one is about to roll over. */
-function freshCode(): string {
+/**
+ * Codes are single-use. Enrolment uses the current 30-second step; the one
+ * later sign-in uses the next step (accepted thanks to ±1 step of drift).
+ */
+let enrolledAt = 0;
+function enrolmentCode(): string {
   const left = 30 - (Math.floor(Date.now() / 1000) % 30);
-  return totp(secret, left < 3 ? Date.now() + 3000 : Date.now());
+  enrolledAt = left < 5 ? Date.now() + 6000 : Date.now();
+  return totp(secret, enrolledAt);
 }
+const signInCode = () => totp(secret, enrolledAt + 30_000);
+const STATE = "test-results/.signed-in.json";
 
 test("deep link while signed out asks to sign in", async ({ page }) => {
   await page.goto("/patients");
@@ -71,7 +78,7 @@ test("first sign-in sets up two-step sign-in, then lands on Today", async ({ pag
   await axe(page, "mfa step 2");
   await shot(page, "03-mfa-2-scan");
 
-  await page.getByLabel("6-digit code from the app").fill(freshCode());
+  await page.getByLabel("6-digit code from the app").fill(enrolmentCode());
   await page.getByRole("button", { name: "Turn on two-step sign-in" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Save your backup codes" })).toBeVisible();
   await expect(page.getByRole("list", { name: "Backup codes" }).getByRole("listitem")).toHaveCount(10);
@@ -88,17 +95,15 @@ test("first sign-in sets up two-step sign-in, then lands on Today", async ({ pag
   await expect(page.getByRole("region", { name: "Your patients" }).getByRole("link").first()).toBeVisible();
   await axe(page, "today");
   await shot(page, "05-today");
+  await page.context().storageState({ path: STATE });
 });
 
 test.describe("signed in", () => {
+  // Reuse the session from enrolment instead of signing in (and spending a code) per test.
+  test.use({ storageState: STATE });
   test.beforeEach(async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.getByLabel("Email").fill(EMAIL);
-    await page.getByLabel("Password").fill(PASSWORD);
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Enter your code" })).toBeVisible();
-    await page.getByLabel("Authentication code").fill(freshCode()); // submits on the sixth digit
-    await expect(page).toHaveURL(/\/today$/);
+    await page.goto("/today");
+    await expect(page.getByRole("heading", { level: 1, name: /Yael/ })).toBeVisible();
   });
 
   test("patients: one clinic at a time, searchable, each opens", async ({ page }) => {
@@ -201,6 +206,13 @@ test.describe("signed in", () => {
     await expect(page.getByRole("status")).toHaveText("You've signed out.");
     await page.goto("/today");
     await expect(page).toHaveURL(/\/sign-in/);
+
+    // Signing in again needs a code, and lands where the user was going.
+    await page.getByLabel("Email").fill(EMAIL);
+    await page.getByLabel("Password").fill(PASSWORD);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByLabel("Authentication code").fill(signInCode()); // submits on the sixth digit
+    await expect(page).toHaveURL(/\/today$/);
   });
 });
 

@@ -11,6 +11,7 @@
  *   which is what RLS sees as app.user_id.
  */
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { twoFactor } from "better-auth/plugins";
 import pg from "pg";
 import { uuidv7 } from "./ids.ts";
@@ -56,6 +57,18 @@ export function createAuth(config: AuthConfig, servicePool: pg.Pool) {
     },
     rateLimit: { enabled: config.rateLimit ?? true, window: 15 * 60, max: 100 },
     plugins: [twoFactor({ issuer: "eMazeBrain" })],
+    hooks: {
+      // TOTP replay protection: a code is accepted once per user per 120 s.
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/two-factor/verify-totp") return;
+        const code = typeof ctx.body?.code === "string" ? ctx.body.code.trim() : "";
+        if (!/^\d{6}$/.test(code)) return; // malformed codes fail in Better Auth itself
+        const userId = await userForTwoFactor(ctx);
+        if (!userId) return; // no pending sign-in or session: Better Auth rejects it
+        const { rows } = await servicePool.query<{ ok: boolean }>(`SELECT auth.claim_totp($1, $2) AS ok`, [userId, code]);
+        if (!rows[0]?.ok) throw APIError.from("UNAUTHORIZED", { message: "Invalid code", code: "INVALID_CODE" });
+      }),
+    },
     advanced: {
       database: { generateId: () => uuidv7() },
       cookiePrefix: "emb",
@@ -76,6 +89,19 @@ export function createAuth(config: AuthConfig, servicePool: pg.Pool) {
       },
     },
   });
+}
+
+type HookCtx = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
+
+/** The user a code is being checked for: the signed-in user (enrolment), or the pending two-step sign-in. */
+async function userForTwoFactor(ctx: HookCtx): Promise<string | null> {
+  const session = await getSessionFromCtx(ctx).catch(() => null);
+  if (session) return session.user.id;
+  const cookie = ctx.context.createAuthCookie("two_factor");
+  const token = await ctx.getSignedCookie(cookie.name, ctx.context.secret);
+  if (!token) return null;
+  const pending = await ctx.context.internalAdapter.findVerificationValue(token);
+  return pending?.value ?? null;
 }
 
 export type Auth = ReturnType<typeof createAuth>;

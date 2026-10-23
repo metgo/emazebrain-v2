@@ -20,4 +20,3 @@
 
 - Production origin layout: serve the SPA and the cell's `/api` and `/v1` from one origin through CloudFront so session cookies stay first-party. Decide with the infrastructure work.
 - Bundle is ~530 kB before gzip (~170 kB gzipped). Split auth screens from the shell when the MVP screens land.
-- Better Auth accepts the same TOTP code more than once within its 30-second window. Add replay protection (remember the last accepted time step per user) before launch.
