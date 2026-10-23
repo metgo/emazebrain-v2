@@ -23,18 +23,30 @@ export async function migrate(client: pg.Client, dir = MIGRATIONS_DIR): Promise<
   for (const file of files) {
     if (done.has(file)) continue;
     const sql = await readFile(join(dir, file), "utf8");
-    await client.query("BEGIN");
-    try {
-      await client.query(sql);
-      await client.query("INSERT INTO public.schema_migrations (name) VALUES ($1)", [file]);
-      await client.query("COMMIT");
-      applied.push(file);
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw new Error(`Migration ${file} failed: ${(err as Error).message}`);
+    for (let attempt = 1; ; attempt++) {
+      await client.query("BEGIN");
+      try {
+        await client.query(sql);
+        await client.query("INSERT INTO public.schema_migrations (name) VALUES ($1)", [file]);
+        await client.query("COMMIT");
+        applied.push(file);
+        break;
+      } catch (err) {
+        await client.query("ROLLBACK");
+        // Roles are cluster-wide. When two databases on one server migrate at the
+        // same moment (parallel test runs), both can pass "IF NOT EXISTS" and one
+        // CREATE ROLE loses. The transaction rolled back, so running it again is safe.
+        if (attempt < 3 && isConcurrentRoleCreate(err)) continue;
+        throw new Error(`Migration ${file} failed: ${(err as Error).message}`);
+      }
     }
   }
   return applied;
+}
+
+function isConcurrentRoleCreate(err: unknown): boolean {
+  const e = err as { code?: string; constraint?: string };
+  return (e.code === "23505" && e.constraint === "pg_authid_rolname_index") || e.code === "42710";
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
